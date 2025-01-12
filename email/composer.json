@@ -1,0 +1,15 @@
+{
+    "name": "julio/email",
+    "autoload": {
+        "psr-4": {
+            "Julio\\Email\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Julio Abreu CanalDev33",
+            "email": "canaldev33@gmail.com"
+        }
+    ],
+    "require": {}
+}
