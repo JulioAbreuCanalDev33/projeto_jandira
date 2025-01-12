@@ -1,5 +1,6 @@
 <?php
 
+// topic: send email using php
 $to = "canaldev33@gmail.com";
 $subject = "Test mail";
 $message = "Hello! This is a simple email message.";
