@@ -1,125 +1,118 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include("conexao.php");
 
-// Função para excluir arquivos
-if (isset($_GET['deletar'])) {
+if(isset($_GET['deletar'])) {
     $id = intval($_GET['deletar']);
     $sql_query = $mysqli->query("SELECT * FROM arquivos WHERE id = '$id'") or die($mysqli->error);
     $arquivo = $sql_query->fetch_assoc();
 
-    if ($arquivo && unlink($arquivo['path'])) {
-        $deu_certo = $mysqli->query("DELETE FROM arquivos WHERE id = '$id'") or die($mysqli->error);
-        if ($deu_certo) {
-            echo "<p>Arquivo excluído com sucesso!</p>";
-            // Redirecionamento para evitar reenvio do formulário
-            header("Location: index.php");
-            exit();
+    if (!$arquivo) {
+        die("Arquivo não encontrado no banco de dados.");
+    }
+
+    if (!empty($arquivo['path']) && file_exists($arquivo['path'])) {
+        if (is_writable($arquivo['path'])) {
+            if (unlink($arquivo['path'])) {
+                $deu_certo = $mysqli->query("DELETE FROM arquivos WHERE id = '$id'") or die($mysqli->error);
+                echo "<p>Arquivo excluído com sucesso!</p>";
+            } else {
+                die("Erro ao tentar deletar o arquivo: " . $arquivo['path']);
+            }
+        } else {
+            die("Permissões insuficientes para excluir o arquivo: " . $arquivo['path']);
         }
     } else {
-        echo "<p>Falha ao excluir o arquivo.</p>";
+        die("O arquivo não existe no caminho especificado.");
     }
 }
 
-// Função para enviar arquivos
 function enviarArquivo($error, $size, $name, $tmp_name) {
-    global $mysqli;
+    include("conexao.php");
 
-    if ($error !== UPLOAD_ERR_OK) {
-        die("Falha ao enviar o arquivo. Erro: " . $error);
-    }
+    if($error)
+        die("Falha ao enviar arquivo");
 
-    if ($size > 2097152) {
-        die("Arquivo muito grande! Tamanho máximo permitido: 2MB.");
-    }
+    if($size > 2097152)
+        die("Arquivo muito grande!! Max: 2MB"); 
 
     $pasta = "arquivos/";
-    $nomeDoArquivo = basename($name);
+    $nomeDoArquivo = $name;
     $novoNomeDoArquivo = uniqid();
     $extensao = strtolower(pathinfo($nomeDoArquivo, PATHINFO_EXTENSION));
 
-    // Verifica a extensão do arquivo
-    if (!in_array($extensao, ['jpg', 'png', 'jpeg'])) {
-        die("Formato de arquivo não permitido. Use apenas JPG ou PNG.");
-    }
+    if($extensao != "jpg" && $extensao != 'png')
+        die("Tipo de arquivo não aceito");
 
     $path = $pasta . $novoNomeDoArquivo . "." . $extensao;
-    if (move_uploaded_file($tmp_name, $path)) {
-        // Corrigido o formato da query SQL
-        $stmt = $mysqli->prepare("INSERT INTO arquivos (nome, path) VALUES (?, ?)");
-        $stmt->bind_param("ss", $nomeDoArquivo, $path);
-        $stmt->execute();
+    $deu_certo = move_uploaded_file($tmp_name, $path);
+    if ($deu_certo) {
+        $mysqli->query("INSERT INTO arquivos (nome, path) VALUES('$nomeDoArquivo', '$path')") or die($mysqli->error);
         return true;
+    } else {
+        die("Erro ao mover o arquivo para: " . $path);
     }
-    return false;
 }
 
-// Processamento de upload
-if (isset($_FILES['arquivos'])) {
+if(isset($_FILES['arquivos'])) {
     $arquivos = $_FILES['arquivos'];
     $tudo_certo = true;
-
-    foreach ($arquivos['name'] as $index => $arq) {
-        $deu_certo = enviarArquivo(
-            $arquivos['error'][$index], 
-            $arquivos['size'][$index], 
-            $arquivos['name'][$index], 
-            $arquivos["tmp_name"][$index]
-        );
-
-        if (!$deu_certo) {
+    foreach($arquivos['name'] as $index => $arq) {
+        $deu_certo = enviarArquivo($arquivos['error'][$index], $arquivos['size'][$index], $arquivos['name'][$index], $arquivos["tmp_name"][$index]);
+        if(!$deu_certo) {
             $tudo_certo = false;
         }
-    }
-    
-    
-    if ($tudo_certo) {
+    }  
+    if($tudo_certo) {
         echo "<p>Todos os arquivos foram enviados com sucesso!</p>";
     } else {
         echo "<p>Falha ao enviar um ou mais arquivos!</p>";
     }
+
+    header("Location: index.php");
+    exit();
 }
 
-// Seleção dos arquivos existentes
-$sql_query = $mysqli->query("SELECT * FROM arquivos ORDER BY data_upload DESC") or die($mysqli->error);
+$sql_query = $mysqli->query("SELECT * FROM arquivos") or die($mysqli->error);
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload de Arquivo</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 </head>
-<body class="container mt-5">
-    <h1 class="text-center">Upload de Arquivos</h1>
-    <form method="POST" enctype="multipart/form-data" class="my-4">
-        <label for="arquivos" class="form-label">Selecione os arquivos (JPG/PNG):</label>
-        <input multiple name="arquivos[]" type="file" class="form-control mb-3" required>
-        <button name="upload" type="submit" class="btn btn-success">Enviar Arquivo</button>
+<body>
+    <form method="POST" enctype="multipart/form-data" action="">
+        <p><label for="">Selecione o arquivo</label>
+        <input multiple name="arquivos[]" type="file"></p>
+        <button name="upload" type="submit">Enviar arquivo</button>
     </form>
 
-    <h2 class="mt-5">Lista de Arquivos</h2>
-    <table class="table table-striped table-bordered">
+    <h1>Lista de Arquivos</h1>
+    <table border="1" cellpadding="10">
         <thead>
-            <tr>
-                <th>Preview</th>
-                <th>Arquivo</th>
-                <th>Data de Envio</th>
-                <th>Ações</th>
-            </tr>
+            <th>Preview</th>
+            <th>Arquivo</th>
+            <th>Data de Envio</th>
+            <th></th>
         </thead>
         <tbody>
-            <?php while ($arquivo = $sql_query->fetch_assoc()) : ?>
+            <?php
+            while($arquivo = $sql_query->fetch_assoc()) {
+            ?>
             <tr>
-                <td><img height="50" src="<?php echo htmlspecialchars($arquivo['path']); ?>" alt="Imagem"></td>
+                <td><img height="50" src="<?php echo htmlspecialchars($arquivo['path']); ?>" alt=""></td>
                 <td><a target="_blank" href="<?php echo htmlspecialchars($arquivo['path']); ?>"><?php echo htmlspecialchars($arquivo['nome']); ?></a></td>
                 <td><?php echo date("d/m/Y H:i", strtotime($arquivo['data_upload'])); ?></td>
-                <td>
-                    <a class="btn btn-danger" href="index.php?deletar=<?php echo $arquivo['id']; ?>" onclick="return confirm('Tem certeza que deseja excluir?')">Deletar</a>
-                </td>
+                <th><a href="index.php?deletar=<?php echo $arquivo['id']; ?>">Deletar</a></th>
             </tr>
-            <?php endwhile; ?>
+            <?php
+            }
+            ?>
         </tbody>
     </table>
 </body>
