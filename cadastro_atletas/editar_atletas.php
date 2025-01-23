@@ -7,7 +7,7 @@ if (count($_POST) > 0) {
     function limpar_texto($str) {
         return preg_replace("/[0-9]/", "", $str);
     }
-
+    $foto = $_POST['foto'];
     $nome = $_POST['nome'];
     $rg = $_POST['rg'];
     $cpf = $_POST['cpf'];
@@ -18,6 +18,7 @@ if (count($_POST) > 0) {
     $cidade = $_POST['cidade'];
     $data_nascimento = $_POST['data_nascimento'];
     $email = $_POST['email'];
+    $senha = $_POST['senha'];
     $telefone = $_POST['telefone'];
 
     if (empty($nome)) {
@@ -41,10 +42,36 @@ if (count($_POST) > 0) {
         }
     }
 
+    function enviarArquivo($error, $size, $name, $tmp_name) {
+        include("conexao.php");
+    
+        if($error)
+            die("Falha ao enviar arquivo");
+    
+        if($size > 2097152)
+            die("Arquivo muito grande!! Max: 2MB"); 
+    
+        $pasta = "arquivos/";
+        $nomeDoArquivo = $name;
+        $novoNomeDoArquivo = uniqid();
+        $extensao = strtolower(pathinfo($nomeDoArquivo, PATHINFO_EXTENSION));
+    
+        if($extensao != "jpg" && $extensao != 'png'){
+            die("Tipo de arquivo não aceito");
+    
+            $path = $pasta . $novoNomeDoArquivo . "." . $extensao;
+            $deu_certo = move_uploaded_file($tmp_name, $path);
+        } else {
+            die("Erro ao mover o arquivo para: " . $path);
+        }
+    }
+    
+
     if ($erro) {
         echo "<p><b>ERRO: $erro</b></p>";
     } else {
         $sql_code = "UPDATE cadastro_atletas SET 
+            foto = '$foto',
             nome = '$nome',
             rg = '$rg',
             cpf = '$cpf',
@@ -55,6 +82,7 @@ if (count($_POST) > 0) {
             cidade = '$cidade',
             data_nascimento = '$data_nascimento',
             email = '$email',
+            senha = '$senha',
             telefone = '$telefone'
             WHERE id = '$id'";
 
@@ -125,8 +153,18 @@ $atletas = $query_atletas->fetch_assoc();
                 <input type="email" class="form-control" id="email" name="email" value="<?php echo $atletas['email']; ?>">
             </div>
             <div class="col-md-6">
+                <label for="senha" class="form-label">Senha</label>
+                <input type="senha" class="form-control" id="senha" name="senha" value="<?php echo $atletas['senha']; ?>">
+            </div>
+            <div class="col-md-6">
                 <label for="telefone" class="form-label">Telefone</label>
                 <input type="text" class="form-control" id="telefone" name="telefone" value="<?php echo $atletas['telefone']; ?>">
+            </div>
+            <div>
+                 <p>
+                    <label for="">Selecione o arquivo</label>
+                    <input multiple name="foto" type="file" value="<?php echo $atletas['foto']; ?>">
+                </p>
             </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-primary">Salvar Atleta</button>

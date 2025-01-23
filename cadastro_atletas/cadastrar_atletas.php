@@ -1,66 +1,103 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include('conexao.php');
 
 $erro = false;
 
-if (count($_POST) > 0) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     function limpar_texto($str) {
-        return preg_replace("/[0-9]/", "", $str);
+        return preg_replace("/[^0-9]/", "", $str);
     }
 
-    $nome = $_POST['nome'];
-    $rg = $_POST['rg'];
-    $cpf = $_POST['cpf'];
-    $endereco = $_POST['endereco'];
-    $numero = $_POST['numero'];
-    $cep = $_POST['cep'];
-    $municipio = $_POST['municipio'];
-    $cidade = $_POST['cidade'];
-    $data_nascimento = $_POST['data_nascimento'];
-    $email = $_POST['email'];
-    $senha = $_POST['senha'];
-    $telefone = $_POST['telefone'];
+    $nome = trim($_POST['nome'] ?? '');
+    $rg = trim($_POST['rg'] ?? '');
+    $cpf = limpar_texto($_POST['cpf'] ?? '');
+    $endereco = trim($_POST['endereco'] ?? '');
+    $numero = limpar_texto($_POST['numero'] ?? '');
+    $cep = limpar_texto($_POST['cep'] ?? '');
+    $municipio = trim($_POST['municipio'] ?? '');
+    $cidade = trim($_POST['cidade'] ?? '');
+    $data_nascimento = trim($_POST['data_nascimento'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $telefone = limpar_texto($_POST['telefone'] ?? '');
+    $senha_descriptografada = trim($_POST['senha'] ?? '');
+    $foto = $_FILES['foto'] ?? null;
 
+    // Validações
     if (empty($nome)) {
-        $erro = "Preencha o nome";
-    }
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $erro = "Preencha o E-mail";
-    }
-    if (!empty($data_nascimento)) {
+        $erro = "O campo 'Nome' é obrigatório.";
+    } elseif (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $erro = "Preencha um e-mail válido.";
+    } elseif (!empty($data_nascimento)) {
         $pedacos = explode('/', $data_nascimento);
-        if (count($pedacos) == 3) {
+        if (count($pedacos) === 3) {
             $data_nascimento = implode('-', array_reverse($pedacos));
         } else {
-            $erro = "A data de nascimento deve seguir o padrão dia/mês/ano.";
-        }
-    }
-    if (empty($telefone)) {
-        $telefone = limpar_texto($telefone);
-        if (strlen($telefone) != 15) {
-            $erro = "O telefone deve ser preenchido no padrão (11) 94647-6117";
+            $erro = "A data de nascimento deve estar no formato dia/mês/ano.";
         }
     }
 
-    if ($erro) {
-        echo "<p><b>ERRO: $erro</b></p>";
+    if (!$erro && !empty($telefone) && strlen($telefone) !== 11) {
+        $erro = "O telefone deve ser preenchido no formato (11) 94647-6117.";
+    }
+
+    if (!$erro && (strlen($senha_descriptografada) < 6 || strlen($senha_descriptografada) > 16)) {
+        $erro = "A senha deve ter no mínimo 6 caracteres e no máximo 16.";
+    }
+
+    // Verifica se a foto foi enviada
+    if (!$erro && $foto && $foto['error'] == UPLOAD_ERR_OK) {
+        $extensao = strtolower(pathinfo($foto['name'], PATHINFO_EXTENSION));
+        $extensoes_permitidas = ['jpg', 'jpeg', 'png', 'gif'];
+
+        if (!in_array($extensao, $extensoes_permitidas)) {
+            $erro = "A foto deve ser uma imagem no formato JPG, JPEG, PNG ou GIF.";
+        } else {
+            $caminho_foto = 'arquivos/' . uniqid() . '.' . $extensao;
+            if (!move_uploaded_file($foto['tmp_name'], $caminho_foto)) {
+                $erro = "Erro ao salvar a foto. Tente novamente.";
+            }
+        }
+    } elseif (!$erro && !$foto) {
+        $erro = "O campo de foto é obrigatório.";
+    }
+
+    // Inserção no banco de dados
+    if (!$erro) {
+        try {
+            $stmt = $mysqli->prepare("INSERT INTO cadastro_atletas 
+                (nome, rg, cpf, endereco, numero, cep, municipio, cidade, data_nascimento, email, senha, telefone, foto) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+            $senha = password_hash($senha_descriptografada, PASSWORD_DEFAULT);
+
+            $stmt->bind_param(
+                "sssssssssssss",
+                $nome, $rg, $cpf, $endereco, $numero, $cep, $municipio, $cidade, $data_nascimento, $email, $senha, $telefone, $caminho_foto
+            );
+
+            if ($stmt->execute()) {
+                echo "<p class='text-success'><b>Atleta cadastrado com sucesso!</b></p>";
+                $_POST = [];
+            } else {
+                throw new Exception("Erro ao cadastrar atleta: " . $stmt->error);
+            }
+
+            $stmt->close();
+        } catch (Exception $e) {
+            echo "<p class='text-danger'><b>ERRO: " . $e->getMessage() . "</b></p>";
+        }
     } else {
-        $sql_code = "INSERT INTO cadastro_atletas (nome, rg, cpf, endereco, numero, cep, municipio, cidade, data_nascimento, email, senha, telefone) 
-                     VALUES ('$nome', '$rg', '$cpf', '$endereco', '$numero', '$cep', '$municipio', '$cidade', '$data_nascimento', '$email', '$senha', '$telefone')";
-
-        $deu_certo = $mysqli->query($sql_code) or die($mysqli->error);
-
-        if ($deu_certo) {
-            echo "<p><b>Atleta cadastrado com sucesso!!!</b></p>";
-            unset($_POST);
-        }
+        echo "<p class='text-danger'><b>ERRO: $erro</b></p>";
     }
 }
-
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,54 +107,58 @@ if (count($_POST) > 0) {
 <body class="bg-light">
     <div class="container mt-5">
         <a href="atletas.php" class="btn btn-link mb-3">Voltar para a lista</a>
-        <form method="POST" action="" class="row g-3 p-4 bg-success-subtle" style="border: 1px solid #ddd; border-radius: 8px;">
+        <form method="POST" action="" class="row g-3 p-4 bg-success-subtle" enctype="multipart/form-data" style="border: 1px solid #ddd; border-radius: 8px;">
             <div class="col-md-6">
                 <label for="nome" class="form-label">Nome</label>
-                <input type="text" class="form-control" id="nome" name="nome" value="<?php echo isset($_POST['nome']) ? $_POST['nome'] : ''; ?>">
+                <input type="text" class="form-control" id="nome" name="nome" value="<?= htmlspecialchars($_POST['nome'] ?? ''); ?>" required>
             </div>
             <div class="col-md-6">
                 <label for="rg" class="form-label">RG</label>
-                <input type="text" class="form-control" id="rg" name="rg" value="<?php echo isset($_POST['rg']) ? $_POST['rg'] : ''; ?>">
+                <input type="text" class="form-control" id="rg" name="rg" value="<?= htmlspecialchars($_POST['rg'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="cpf" class="form-label">CPF</label>
-                <input type="text" class="form-control" id="cpf" name="cpf" value="<?php echo isset($_POST['cpf']) ? $_POST['cpf'] : ''; ?>">
+                <input type="text" class="form-control" id="cpf" name="cpf" value="<?= htmlspecialchars($_POST['cpf'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="endereco" class="form-label">Endereço</label>
-                <input type="text" class="form-control" id="endereco" name="endereco" value="<?php echo isset($_POST['endereco']) ? $_POST['endereco'] : ''; ?>">
+                <input type="text" class="form-control" id="endereco" name="endereco" value="<?= htmlspecialchars($_POST['endereco'] ?? ''); ?>">
             </div>
             <div class="col-md-3">
                 <label for="numero" class="form-label">Número</label>
-                <input type="text" class="form-control" id="numero" name="numero" value="<?php echo isset($_POST['numero']) ? $_POST['numero'] : ''; ?>">
+                <input type="text" class="form-control" id="numero" name="numero" value="<?= htmlspecialchars($_POST['numero'] ?? ''); ?>">
             </div>
             <div class="col-md-3">
                 <label for="cep" class="form-label">CEP</label>
-                <input type="text" class="form-control" id="cep" name="cep" value="<?php echo isset($_POST['cep']) ? $_POST['cep'] : ''; ?>">
+                <input type="text" class="form-control" id="cep" name="cep" value="<?= htmlspecialchars($_POST['cep'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="municipio" class="form-label">Município</label>
-                <input type="text" class="form-control" id="municipio" name="municipio" value="<?php echo isset($_POST['municipio']) ? $_POST['municipio'] : ''; ?>">
+                <input type="text" class="form-control" id="municipio" name="municipio" value="<?= htmlspecialchars($_POST['municipio'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="cidade" class="form-label">Cidade</label>
-                <input type="text" class="form-control" id="cidade" name="cidade" value="<?php echo isset($_POST['cidade']) ? $_POST['cidade'] : ''; ?>">
+                <input type="text" class="form-control" id="cidade" name="cidade" value="<?= htmlspecialchars($_POST['cidade'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="data_nascimento" class="form-label">Data de Nascimento</label>
-                <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" value="<?php echo isset($_POST['data_nascimento']) ? $_POST['data_nascimento'] : ''; ?>">
+                <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" value="<?= htmlspecialchars($_POST['data_nascimento'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="email" class="form-label">E-mail</label>
-                <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($_POST['email']) ? $_POST['email'] : ''; ?>">
+                <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? ''); ?>">
             </div>
             <div class="col-md-6">
                 <label for="senha" class="form-label">Senha</label>
-                <input type="senha" class="form-control" id="senha" name="senha" value="<?php echo isset($_POST['senha']) ? $_POST['senha'] : ''; ?>">
+                <input type="text" class="form-control" id="senha" name="senha">
             </div>
             <div class="col-md-6">
                 <label for="telefone" class="form-label">Telefone</label>
-                <input type="text" class="form-control" id="telefone" name="telefone" value="<?php echo isset($_POST['telefone']) ? $_POST['telefone'] : ''; ?>">
+                <input type="text" class="form-control" id="telefone" name="telefone" value="<?= htmlspecialchars($_POST['telefone'] ?? ''); ?>">
+            </div>
+            <div class="col-md-12">
+                <label for="foto" class="form-label">Foto</label>
+                <input type="file" class="form-control" id="foto" name="foto" required>
             </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-primary">Cadastrar Atleta</button>
