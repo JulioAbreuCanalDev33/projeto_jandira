@@ -104,3 +104,4 @@ Este projeto está sob a licença MIT. Sinta-se à vontade para usá-lo, modific
 
 Espero que este projeto seja útil! Se gostou, não esqueça de dar uma ⭐ no repositório.
 
+---
