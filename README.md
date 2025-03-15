@@ -104,6 +104,3 @@ Este projeto está sob a licença MIT. Sinta-se à vontade para usá-lo, modific
 
 Espero que este projeto seja útil! Se gostou, não esqueça de dar uma ⭐ no repositório.
 
----
-
-Para aqueles que queiram contribuir e dar suporte ao meu projeto e outros que estão em desenvolvimento, Pix canaldev33@gmail.com 👊🏽
