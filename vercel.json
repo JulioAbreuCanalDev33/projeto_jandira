@@ -1,7 +1,7 @@
 {
   "builds": [
     {
-      "src": "**/*.php",
+      "src": "index.php",
       "use": "vercel-php@0.7.3"
     },
     {
@@ -16,7 +16,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/index.php"
     }
   ]
 }
