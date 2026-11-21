@@ -1,22 +1,201 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "builds": [
     {
       "src": "index.php",
       "use": "vercel-php@0.7.3"
     },
     {
+      "src": "cadastro_atletas/atletas.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/cadastrar_atletas.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/editar_atletas.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/deletar_atletas.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/adicionar_eventos.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "criptografia/login.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "criptografia/logout.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "criptografia/index.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "upload/index.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "email/enviar.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
       "src": "assets/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cadastro_atletas/arquivos/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "upload/arquivos/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
+      "src": "^/assets/(.*)$",
       "dest": "/assets/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "^/cadastro_atletas/arquivos/(.*)$",
+      "dest": "/cadastro_atletas/arquivos/$1"
+    },
+    {
+      "src": "^/upload/arquivos/(.*)$",
+      "dest": "/upload/arquivos/$1"
+    },
+    {
+      "src": "^/$",
       "dest": "/index.php"
+    },
+    {
+      "src": "^/index\\.php$",
+      "dest": "/index.php"
+    },
+    {
+      "src": "^/cadastro_atletas/atletas\\.php$",
+      "dest": "/cadastro_atletas/atletas.php"
+    },
+    {
+      "src": "^/cadastro_atletas/cadastrar_atletas\\.php$",
+      "dest": "/cadastro_atletas/cadastrar_atletas.php"
+    },
+    {
+      "src": "^/cadastro_atletas/editar_atletas\\.php$",
+      "dest": "/cadastro_atletas/editar_atletas.php"
+    },
+    {
+      "src": "^/cadastro_atletas/deletar_atletas\\.php$",
+      "dest": "/cadastro_atletas/deletar_atletas.php"
+    },
+    {
+      "src": "^/cadastro_atletas/adicionar_eventos\\.php$",
+      "dest": "/cadastro_atletas/adicionar_eventos.php"
+    },
+    {
+      "src": "^/criptografia/login\\.php$",
+      "dest": "/criptografia/login.php"
+    },
+    {
+      "src": "^/criptografia/logout\\.php$",
+      "dest": "/criptografia/logout.php"
+    },
+    {
+      "src": "^/criptografia/index\\.php$",
+      "dest": "/criptografia/index.php"
+    },
+    {
+      "src": "^/upload/index\\.php$",
+      "dest": "/upload/index.php"
+    },
+    {
+      "src": "^/email/enviar\\.php$",
+      "dest": "/email/enviar.php"
+    },
+    {
+      "src": "^/cadastro_atletas/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/atletas.php"
+      }
+    },
+    {
+      "src": "^/upload/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/upload/index.php"
+      }
+    },
+    {
+      "src": "^/criptografia/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/criptografia/index.php"
+      }
+    },
+    {
+      "src": "^/email/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/email/enviar.php"
+      }
+    },
+    {
+      "src": "^/atletas/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/atletas.php"
+      }
+    },
+    {
+      "src": "^/cadastrar-atleta/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/cadastrar_atletas.php"
+      }
+    },
+    {
+      "src": "^/eventos/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/adicionar_eventos.php"
+      }
+    },
+    {
+      "src": "^/arquivos/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/upload/index.php"
+      }
+    },
+    {
+      "src": "^/login/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/criptografia/login.php"
+      }
+    },
+    {
+      "src": "^/painel/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/criptografia/index.php"
+      }
+    },
+    {
+      "src": "^/cadastro-atletas/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/atletas.php"
+      }
     }
   ]
 }
