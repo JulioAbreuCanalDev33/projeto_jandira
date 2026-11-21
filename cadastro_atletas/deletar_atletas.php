@@ -1,41 +1,166 @@
 <?php
-if (isset($_POST['confirmar'])) {
-    include('conexao.php');
-    $id = intval($_GET['id']);
-    $sql_code = "DELETE FROM cadastro_atletas WHERE id = '$id'";
-    $sql_query = $mysqli->query($sql_code) or die($mysqli->error);
+require_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/conexao.php';
 
-    if ($sql_query) { ?>
-        <div class="alert alert-success text-center" role="alert">
-            <h1>Atleta deletado com sucesso!</h1>
-            <p><a href="atletas.php" class="btn btn-link">Clique aqui</a> para voltar para a lista dos atletas.</p>
-        </div>
-    <?php
-        die();
-    }
+require_csrf();
+
+$id = (int) ($_GET['id'] ?? 0);
+
+if ($id <= 0) {
+    header('Location: atletas.php');
+    exit;
 }
+
+$stmt = $mysqli->prepare('SELECT * FROM cadastro_atletas WHERE id = ? LIMIT 1');
+$stmt->bind_param('i', $id);
+$stmt->execute();
+$resultado = $stmt->get_result();
+$atleta = $resultado->fetch_assoc();
+$stmt->close();
+
+if (!$atleta) {
+    render_layout_start('Atleta não encontrado', 'atletas');
+    render_page_header(
+        'Gestão de atletas',
+        'Atleta não encontrado',
+        'O registro solicitado não existe ou já foi removido do sistema.',
+        ['Atletas' => app_url('cadastro_atletas/atletas.php'), 'Atleta não encontrado' => null]
+    );
+    ?>
+    <section class="page-content">
+        <div class="container">
+            <div class="surface-card">
+                <div class="empty-state">
+                    <span class="empty-state-icon"><i class="bi bi-person-x" aria-hidden="true"></i></span>
+                    <h3>Não encontramos este atleta</h3>
+                    <p>Volte para a lista e selecione um registro válido.</p>
+                    <a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>" class="btn btn-brand">
+                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar para atletas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    <?php
+    render_layout_end();
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
+    $delete = $mysqli->prepare('DELETE FROM cadastro_atletas WHERE id = ?');
+    $delete->bind_param('i', $id);
+
+    if ($delete->execute()) {
+        $delete->close();
+
+        $foto = (string) ($atleta['foto'] ?? '');
+        if ($foto !== '' && str_starts_with($foto, 'arquivos/')) {
+            $caminhoFoto = __DIR__ . '/' . $foto;
+            if (file_exists($caminhoFoto)) {
+                @unlink($caminhoFoto);
+            }
+        }
+
+        header('Location: atletas.php?sucesso=excluido');
+        exit;
+    }
+
+    $delete->close();
+    $erro = 'Não foi possível excluir o atleta. Tente novamente.';
+}
+
+$fotoRelativa = (string) ($atleta['foto'] ?? '');
+$temFoto = $fotoRelativa !== '' && file_exists(__DIR__ . '/' . $fotoRelativa);
+
+render_layout_start('Excluir atleta', 'atletas', 'Confirme a exclusão do atleta.');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <title>Deletar Atletas</title>
-</head>
-<body>
-    <div class="container mt-5">
+
+<?php
+render_page_header(
+    'Gestão de atletas',
+    'Excluir atleta',
+    'Revise as informações abaixo antes de confirmar a exclusão.',
+    [
+        'Atletas' => app_url('cadastro_atletas/atletas.php'),
+        'Excluir atleta' => null,
+    ]
+);
+?>
+
+<section class="page-content">
+    <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 p-4 bg-danger-subtle border border-danger rounded">
-                <h2 class="text-center text-danger">Confirmação de Exclusão</h2>
-                <p class="text-center">Tem certeza que deseja deletar este atleta?</p>
-                <form action="" method="post" class="text-center">
-                    <button name="confirmar" value="1" type="submit" class="btn btn-danger me-2">Sim</button>
-                    <a href="atletas.php" class="btn btn-secondary">Não</a>
-                </form>
+            <div class="col-12 col-lg-8 col-xl-7">
+                <?php if (isset($erro)): ?>
+                    <div class="mb-4">
+                        <?php render_alert('danger', $erro, 'exclamation-triangle'); ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="surface-card">
+                    <div class="surface-card-header">
+                        <div>
+                            <h2><i class="bi bi-exclamation-triangle me-2 text-danger" aria-hidden="true"></i> Confirmação de exclusão</h2>
+                            <p>Esta ação é permanente e não poderá ser desfeita.</p>
+                        </div>
+                    </div>
+
+                    <div class="surface-card-body">
+                        <div class="person-cell mb-4">
+                            <?php if ($temFoto): ?>
+                                <img class="avatar" src="<?= e($fotoRelativa) ?>" alt="Foto de <?= e($atleta['nome']) ?>">
+                            <?php else: ?>
+                                <span class="avatar avatar-initials" aria-hidden="true"><?= e(iniciais((string) $atleta['nome'])) ?></span>
+                            <?php endif; ?>
+                            <div>
+                                <span class="person-name"><?= e($atleta['nome']) ?></span>
+                                <span class="person-meta"><?= e($atleta['email'] ?: 'E-mail não informado') ?></span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-sm-6">
+                                <span class="person-meta d-block">CPF</span>
+                                <strong class="mono"><?= e(!empty($atleta['cpf']) ? formatar_cpf($atleta['cpf']) : '—') ?></strong>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <span class="person-meta d-block">Telefone</span>
+                                <strong class="mono"><?= e(!empty($atleta['telefone']) ? formatar_telefone($atleta['telefone']) : '—') ?></strong>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <span class="person-meta d-block">Cidade</span>
+                                <strong><?= e($atleta['cidade'] ?: '—') ?></strong>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <span class="person-meta d-block">Data de nascimento</span>
+                                <strong class="mono"><?= e(formatar_data_br($atleta['data_nascimento'])) ?></strong>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning app-alert mb-0" role="alert">
+                            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                            <span>Ao excluir este atleta, a foto e os dados do cadastro serão removidos permanentemente.</span>
+                        </div>
+                    </div>
+
+                    <div class="surface-card-footer">
+                        <form method="post" action="" class="d-flex flex-wrap gap-2 justify-content-end">
+                            <?= csrf_field() ?>
+                            <a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>" class="btn btn-soft">
+                                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" name="confirmar" value="1" class="btn btn-danger">
+                                <i class="bi bi-trash3" aria-hidden="true"></i>
+                                Sim, excluir atleta
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</section>
+
+<?php
+render_layout_end();

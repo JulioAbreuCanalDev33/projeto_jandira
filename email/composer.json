@@ -1,15 +1,19 @@
 {
     "name": "julio/email",
-    "autoload": {
-        "psr-4": {
-            "Julio\\Email\\": "src/"
-        }
-    },
+    "description": "Módulo de envio de e-mail do Projeto Jandira",
+    "type": "project",
+    "license": "MIT",
     "authors": [
         {
-            "name": "Julio Abreu CanalDev33",
+            "name": "Julio Abreu",
             "email": "canaldev33@gmail.com"
+        },
+        {
+            "name": "Samuel Abreu",
+            "email": "samuel.abreux@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "phpmailer/phpmailer": "^6.9"
+    }
 }
