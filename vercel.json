@@ -1,9 +1,14 @@
 {
-  "functions": {
-    "**/*.php": {
-      "runtime": "vercel-php@0.7.3"
+  "builds": [
+    {
+      "src": "**/*.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/assets/(.*)",
