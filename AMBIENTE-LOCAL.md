@@ -88,9 +88,13 @@ As variáveis usadas em produção na Vercel são:
 | Excluir atleta | `/cadastro_atletas/deletar_atletas.php?id=ID` | Confirmação antes da exclusão |
 | Eventos | `/cadastro_atletas/adicionar_eventos.php` | Cadastro e listagem da agenda |
 | Usuários / login | `/criptografia/login.php` | Autenticação da equipe gestora |
-| Painel administrativo | `/criptografia/index.php` | Cadastro de novos acessos |
+| Painel administrativo | `/criptografia/index.php` | Cadastro, edição e exclusão de integrantes da equipe gestora |
+| Editar integrante | `/criptografia/index.php?acao=editar&id=ID` | Alteração de e-mail e senha opcional |
+| Excluir integrante | `/criptografia/index.php?acao=excluir&id=ID` | Confirmação, bloqueio da autoexclusão e do último acesso |
 | Uploads | `/upload/index.php` | Galeria com busca, envio validado e exclusão segura de imagens |
 | E-mail | `/email/enviar.php` | Teste de envio SMTP mediante formulário POST |
+
+Todos os módulos acima, exceto a página inicial e o login, exigem sessão autenticada. Um visitante que tocar em **Atletas**, **Modalidades de esporte**, **Eventos**, **Arquivos** ou **Cadastrar atleta** é redirecionado para `/criptografia/login.php`, com retorno seguro ao módulo solicitado após o login.
 
 ## Tabelas do banco
 
@@ -120,6 +124,8 @@ As imagens das galerias e as fotos de atletas ficam no bucket público `arquivos
 
 - Formulários POST protegidos por token CSRF de sessão.
 - Requisições sem token válido retornam a página “Sessão expirada” com HTTP 419.
+- `exigir_login()` bloqueia o acesso direto aos módulos internos e redireciona visitantes ao login.
+- O destino após o login é validado para evitar redirecionamento para sites externos.
 - Login com `password_hash`/`password_verify` e regeneração do ID de sessão.
 - Logout somente via POST com token CSRF.
 - Consultas feitas via API REST do Supabase, sem concatenação de SQL.

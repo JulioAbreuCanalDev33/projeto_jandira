@@ -106,6 +106,7 @@ Capturas reais da aplicação, em resolução desktop, com os dois temas dispon�
 
 - Hero institucional com chamada para o esporte e a cidadania.
 - Acesso rápido aos módulos de **Atletas**, **Eventos**, **Arquivos** e **Área restrita**.
+- Módulos de gestão protegidos: visitantes são levados ao login ao tocar em qualquer item do menu.
 - Blocos de benefícios: organização, agilidade e confiança.
 - Chamada final para cadastro de novos atletas.
 - Conteúdo público, sem exposição de detalhes técnicos, versões ou credenciais.
@@ -146,7 +147,9 @@ Capturas reais da aplicação, em resolução desktop, com os dois temas dispon�
 - Regeneração do ID de sessão após autenticação.
 - Painel administrativo com atalhos para os módulos.
 - Cadastro de novos acessos com confirmação de senha.
-- Listagem de usuários autorizados.
+- Edição de integrantes: alteração de e-mail e senha opcional (senha atual preservada se o campo ficar vazio).
+- Exclusão de integrantes com confirmação, proteção contra autoexclusão e bloqueio do último acesso ativo.
+- Listagem de usuários autorizados com ações por linha.
 - Logout seguro via POST com token CSRF.
 
 ### ✉️ Módulo de e-mail
@@ -532,6 +535,7 @@ Fotos e documentos são enviados ao bucket público `arquivos` do Supabase Stora
 | --- | --- |
 | **CSRF** | Token de 256 bits por sessão, campo oculto nos formulários e validação antes de qualquer POST |
 | **Falha de CSRF** | Página amigável com HTTP 419 e orientação para recarregar |
+| **Controle de acesso** | `exigir_login()` em todos os módulos internos; visitantes são redirecionados ao login com retorno seguro |
 | **SQL Injection** | Consultas via PostgREST com valores passados como filtros/body; sem concatenação de SQL |
 | **XSS** | Escaping centralizado com `htmlspecialchars` via helper `e()` |
 | **Senhas** | `password_hash` com `PASSWORD_DEFAULT` e `password_verify` |
@@ -575,7 +579,8 @@ O projeto foi validado em fluxos reais, com foco em consistência visual, integr
 | **JavaScript** | Verificação de sintaxe com Node.js |
 | **Dependências** | `composer validate --strict` no módulo de e-mail |
 | **Navegação** | Home, atletas, cadastro, edição, exclusão, eventos, login e upload |
-| **Autenticação** | Login, painel, logout e cadastro de novo acesso |
+| **Autenticação** | Login, painel, logout, cadastro, edição e exclusão de acessos |
+| **Controle de acesso** | Páginas internas redirecionam visitantes ao login; menu do visitante aponta para a tela de entrada |
 | **CSRF** | POST sem token retorna HTTP 419; POST com token executa a ação |
 | **Eventos** | Criação, listagem e validação de período |
 | **Atletas** | Edição com preservação de senha e atualização de dados |

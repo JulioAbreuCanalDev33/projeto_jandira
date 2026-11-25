@@ -61,6 +61,59 @@ function is_logged_in(): bool
 }
 
 /**
+ * URL da tela de login, com retorno seguro para o módulo solicitado.
+ */
+function login_url(string $destino = ''): string
+{
+    $url = app_url('criptografia/login.php');
+
+    if ($destino !== '' && $destino[0] === '/'
+        && !str_starts_with($destino, '//')
+        && !preg_match('/[\r\n\\\\]/', $destino)) {
+        $url .= '?redirect=' . urlencode($destino);
+    }
+
+    return $url;
+}
+
+/**
+ * Valida o destino informado após o login e evita aberturas para sites externos.
+ */
+function redirect_seguro(string $destino): string
+{
+    $painel = app_url('criptografia/index.php');
+    $base = app_base_path();
+
+    if ($destino === '' || $destino[0] !== '/' || str_starts_with($destino, '//')
+        || preg_match('/[\r\n\\\\]/', $destino)) {
+        return $painel;
+    }
+
+    if ($base !== '' && !str_starts_with($destino, $base . '/') && $destino !== $base) {
+        return $painel;
+    }
+
+    if (str_starts_with($destino, app_url('criptografia/login.php'))) {
+        return $painel;
+    }
+
+    return $destino;
+}
+
+/**
+ * Bloqueia visitantes não autenticados nos módulos internos.
+ */
+function exigir_login(): void
+{
+    if (is_logged_in()) {
+        return;
+    }
+
+    header('Location: ' . login_url((string) ($_SERVER['REQUEST_URI'] ?? '')));
+    exit;
+}
+
+/**
  * Gera (uma única vez por sessão) e retorna o token CSRF.
  */
 function csrf_token(): string
@@ -189,6 +242,14 @@ function render_layout_start(string $title, string $active = '', string $descrip
         'eventos' => ['label' => 'Eventos', 'href' => app_url('cadastro_atletas/adicionar_eventos.php')],
         'arquivos' => ['label' => 'Arquivos', 'href' => app_url('upload/index.php')],
     ];
+
+    if (!is_logged_in()) {
+        foreach ($navItems as $key => $item) {
+            if ($key !== 'inicio') {
+                $navItems[$key]['href'] = login_url($item['href']);
+            }
+        }
+    }
     ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -291,7 +352,7 @@ function render_layout_start(string $title, string $active = '', string $descrip
                         </li>
                     <?php endforeach; ?>
                 </ul>
-                <a class="btn btn-brand btn-nav-cta" href="<?= e(app_url('cadastro_atletas/cadastrar_atletas.php')) ?>">
+                <a class="btn btn-brand btn-nav-cta" href="<?= e(is_logged_in() ? app_url('cadastro_atletas/cadastrar_atletas.php') : login_url(app_url('cadastro_atletas/cadastrar_atletas.php'))) ?>">
                     <i class="bi bi-plus-lg" aria-hidden="true"></i>
                     Cadastrar atleta
                 </a>
@@ -306,6 +367,11 @@ function render_layout_start(string $title, string $active = '', string $descrip
 
 function render_layout_end(): void
 {
+    $visitante = !is_logged_in();
+    $linkAtletas = $visitante ? login_url(app_url('cadastro_atletas/atletas.php')) : app_url('cadastro_atletas/atletas.php');
+    $linkModalidades = $visitante ? login_url(app_url('cadastro_atletas/modalidades_esporte.php')) : app_url('cadastro_atletas/modalidades_esporte.php');
+    $linkEventos = $visitante ? login_url(app_url('cadastro_atletas/adicionar_eventos.php')) : app_url('cadastro_atletas/adicionar_eventos.php');
+    $linkArquivos = $visitante ? login_url(app_url('upload/index.php')) : app_url('upload/index.php');
     ?>
 </main>
 
@@ -335,10 +401,10 @@ function render_layout_end(): void
                 <h4>Navegação</h4>
                 <ul class="footer-links">
                     <li><a href="<?= e(app_url('')) ?>">Início</a></li>
-                    <li><a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>">Atletas</a></li>
-                    <li><a href="<?= e(app_url('cadastro_atletas/modalidades_esporte.php')) ?>">Modalidades de esporte</a></li>
-                    <li><a href="<?= e(app_url('cadastro_atletas/adicionar_eventos.php')) ?>">Eventos</a></li>
-                    <li><a href="<?= e(app_url('upload/index.php')) ?>">Arquivos</a></li>
+                    <li><a href="<?= e($linkAtletas) ?>">Atletas</a></li>
+                    <li><a href="<?= e($linkModalidades) ?>">Modalidades de esporte</a></li>
+                    <li><a href="<?= e($linkEventos) ?>">Eventos</a></li>
+                    <li><a href="<?= e($linkArquivos) ?>">Arquivos</a></li>
                 </ul>
             </div>
             <div class="col-6 col-lg-4">

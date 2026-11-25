@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/layout.php';
+exigir_login();
 require_once __DIR__ . '/conexao.php';
 
 $modalidadesEsporte = buscar_modalidades_esporte($db);

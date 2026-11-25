@@ -12,6 +12,7 @@ require_csrf();
 
 $erro = null;
 $email = '';
+$redirect = redirect_seguro((string) ($_GET['redirect'] ?? $_POST['redirect'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string) ($_POST['email'] ?? ''));
@@ -28,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['usuario'] = (int) $usuario['id'];
             $_SESSION['usuario_email'] = $usuario['email'];
 
-            header('Location: index.php');
+            header('Location: ' . $redirect);
             exit;
         }
 
@@ -78,6 +79,7 @@ render_layout_start('Entrar', '', 'Acesse a área restrita do sistema de gestão
 
                         <form method="post" action="">
                             <?= csrf_field() ?>
+                            <input type="hidden" name="redirect" value="<?= e($redirect) ?>">
                             <div class="mb-3">
                                 <label for="email" class="form-label">E-mail <span class="required">*</span></label>
                                 <input type="email" class="form-control" id="email" name="email" value="<?= e($email) ?>" placeholder="seu.email@exemplo.com" autocomplete="username" required autofocus>
@@ -101,7 +103,7 @@ render_layout_start('Entrar', '', 'Acesse a área restrita do sistema de gestão
 
                         <div class="auth-links">
                             <a href="<?= e(app_url('')) ?>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar ao início</a>
-                            <a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>">Consultar atletas</a>
+                            <a href="<?= e(app_url('criptografia/index.php')) ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i> Painel administrativo</a>
                         </div>
 
                         <div class="auth-note">

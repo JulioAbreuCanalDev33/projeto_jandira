@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/layout.php';
+exigir_login();
 require_once __DIR__ . '/vendor/autoload.php';
 
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
