@@ -11,12 +11,7 @@ if ($id <= 0) {
     exit;
 }
 
-$stmt = $mysqli->prepare('SELECT * FROM cadastro_atletas WHERE id = ? LIMIT 1');
-$stmt->bind_param('i', $id);
-$stmt->execute();
-$resultado = $stmt->get_result();
-$atleta = $resultado->fetch_assoc();
-$stmt->close();
+$atleta = $db->selectOne('cadastro_atletas', '*', ['id' => $id]) ?? [];
 
 if (!$atleta) {
     render_layout_start('Atleta não encontrado', 'atletas');
@@ -47,30 +42,20 @@ if (!$atleta) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
-    $delete = $mysqli->prepare('DELETE FROM cadastro_atletas WHERE id = ?');
-    $delete->bind_param('i', $id);
+    $removidos = $db->delete('cadastro_atletas', ['id' => $id]);
 
-    if ($delete->execute()) {
-        $delete->close();
-
-        $foto = (string) ($atleta['foto'] ?? '');
-        if ($foto !== '' && str_starts_with($foto, 'arquivos/')) {
-            $caminhoFoto = __DIR__ . '/' . $foto;
-            if (file_exists($caminhoFoto)) {
-                @unlink($caminhoFoto);
-            }
-        }
+    if ($removidos > 0) {
+        remover_imagem($db, (string) ($atleta['foto'] ?? ''));
 
         header('Location: atletas.php?sucesso=excluido');
         exit;
     }
 
-    $delete->close();
     $erro = 'Não foi possível excluir o atleta. Tente novamente.';
 }
 
 $fotoRelativa = (string) ($atleta['foto'] ?? '');
-$temFoto = $fotoRelativa !== '' && file_exists(__DIR__ . '/' . $fotoRelativa);
+$temFoto = filter_var($fotoRelativa, FILTER_VALIDATE_URL) !== false;
 
 render_layout_start('Excluir atleta', 'atletas', 'Confirme a exclusão do atleta.');
 ?>

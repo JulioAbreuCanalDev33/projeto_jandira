@@ -7,20 +7,10 @@ function flash(string $type, string $message): void
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
 }
 
-function caminho_fisico_arquivo(string $path): ?string
+function caminho_publico_arquivo(string $path): bool
 {
-    if ($path === '' || !str_starts_with($path, 'arquivos/')) {
-        return null;
-    }
-
-    $diretorio = realpath(__DIR__ . '/arquivos');
-    $arquivo = realpath(__DIR__ . '/' . $path);
-
-    if (!$diretorio || !$arquivo || !is_file($arquivo) || !str_starts_with($arquivo, $diretorio . DIRECTORY_SEPARATOR)) {
-        return null;
-    }
-
-    return $arquivo;
+    return filter_var($path, FILTER_VALIDATE_URL) !== false
+        && str_contains($path, '/storage/v1/object/public/arquivos/');
 }
 
 require_csrf();
@@ -28,29 +18,17 @@ require_csrf();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deletar'])) {
     $id = (int) $_POST['deletar'];
 
-    $stmt = $mysqli->prepare('SELECT * FROM arquivos WHERE id = ? LIMIT 1');
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $arquivo = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    $arquivo = $db->selectOne('arquivos', '*', ['id' => $id]);
 
     if (!$arquivo) {
         flash('danger', 'Arquivo não encontrado no banco de dados.');
     } else {
-        $delete = $mysqli->prepare('DELETE FROM arquivos WHERE id = ?');
-        $delete->bind_param('i', $id);
+        $removidos = $db->delete('arquivos', ['id' => $id]);
 
-        if ($delete->execute()) {
-            $delete->close();
-
-            $arquivoFisico = caminho_fisico_arquivo((string) ($arquivo['path'] ?? ''));
-            if ($arquivoFisico !== null) {
-                @unlink($arquivoFisico);
-            }
-
+        if ($removidos > 0) {
+            $db->removerArquivoPublico((string) ($arquivo['path'] ?? ''));
             flash('success', 'Arquivo excluído com sucesso.');
         } else {
-            $delete->close();
             flash('danger', 'Não foi possível excluir o arquivo.');
         }
     }
@@ -81,14 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivos'])) {
         'gif' => 'image/gif',
         'webp' => 'image/webp',
     ];
-    $diretorio = __DIR__ . '/arquivos';
-
-    if (!is_dir($diretorio) && !mkdir($diretorio, 0755, true)) {
-        flash('danger', 'Não foi possível preparar a pasta de arquivos.');
-        header('Location: index.php');
-        exit;
-    }
-
     foreach ($arquivos['name'] as $index => $nomeEnvio) {
         if (($arquivos['error'][$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
             continue;
@@ -124,25 +94,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivos'])) {
         $nomeOriginal = mb_substr($nomeOriginal, 0, 255);
 
         $nomeArquivo = bin2hex(random_bytes(12)) . '.' . $extensao;
-        $path = 'arquivos/' . $nomeArquivo;
-        $destino = $diretorio . DIRECTORY_SEPARATOR . $nomeArquivo;
+        $objeto = 'arquivos/' . $nomeArquivo;
 
-        if (!move_uploaded_file($arquivos['tmp_name'][$index], $destino)) {
+        try {
+            $conteudo = file_get_contents($arquivos['tmp_name'][$index]);
+            if ($conteudo === false) {
+                $falhas++;
+                continue;
+            }
+
+            $path = $db->storageUpload('arquivos', $objeto, $conteudo, $tiposPermitidos[$extensao]);
+            $registro = $db->insert('arquivos', [
+                'nome' => $nomeOriginal,
+                'path' => $path,
+            ]);
+
+            if ($registro !== []) {
+                $enviados++;
+            } else {
+                $db->storageDelete('arquivos', $objeto);
+                $falhas++;
+            }
+        } catch (Throwable) {
             $falhas++;
-            continue;
         }
-
-        $stmt = $mysqli->prepare('INSERT INTO arquivos (nome, path) VALUES (?, ?)');
-        $stmt->bind_param('ss', $nomeOriginal, $path);
-
-        if ($stmt->execute()) {
-            $enviados++;
-        } else {
-            $falhas++;
-            @unlink($destino);
-        }
-
-        $stmt->close();
     }
 
     if ($enviados > 0) {
@@ -164,8 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivos'])) {
 $flashes = $_SESSION['flash'] ?? [];
 unset($_SESSION['flash']);
 
-$queryArquivos = $mysqli->query('SELECT * FROM arquivos ORDER BY data_upload DESC, id DESC');
-$arquivos = $queryArquivos ? $queryArquivos->fetch_all(MYSQLI_ASSOC) : [];
+$arquivos = $db->select('arquivos', '*', [], 'data_upload DESC, id DESC');
 $totalArquivos = count($arquivos);
 
 render_layout_start('Arquivos', 'arquivos', 'Envie e organize fotos e documentos do projeto esportivo.');
@@ -255,7 +229,7 @@ render_page_header(
                                 <?php foreach ($arquivos as $arquivo): ?>
                                     <?php
                                     $path = (string) ($arquivo['path'] ?? '');
-                                    $existe = caminho_fisico_arquivo($path) !== null;
+                                    $existe = caminho_publico_arquivo($path);
                                     ?>
                                     <article class="file-card" data-search="<?= e(mb_strtolower((string) $arquivo['nome'])) ?>">
                                         <div class="file-thumb">

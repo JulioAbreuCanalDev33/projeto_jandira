@@ -11,12 +11,7 @@ if ($id <= 0) {
     exit;
 }
 
-$stmt = $mysqli->prepare('SELECT * FROM cadastro_atletas WHERE id = ? LIMIT 1');
-$stmt->bind_param('i', $id);
-$stmt->execute();
-$resultado = $stmt->get_result();
-$atleta = $resultado->fetch_assoc();
-$stmt->close();
+$atleta = $db->selectOne('cadastro_atletas', '*', ['id' => $id]) ?? [];
 
 if (!$atleta) {
     render_layout_start('Atleta não encontrado', 'atletas');
@@ -71,7 +66,7 @@ $valores['telefone'] = in_array(strlen($telefoneAtual), [10, 11], true) ? format
 $valores['cep'] = strlen($cepAtual) === 8 ? formatar_cep($cepAtual) : (string) $atleta['cep'];
 
 $fotoAtual = (string) ($atleta['foto'] ?? '');
-$temFotoAtual = $fotoAtual !== '' && file_exists(__DIR__ . '/' . $fotoAtual);
+$temFotoAtual = filter_var($fotoAtual, FILTER_VALIDATE_URL) !== false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (array_keys($valores) as $campo) {
@@ -103,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Informe um e-mail válido.';
     } elseif ($dataNormalizada === null) {
         $erro = 'Informe uma data de nascimento válida.';
-    } elseif (!modalidade_esporte_existe($mysqli, $modalidadeEsporteId)) {
+    } elseif (!modalidade_esporte_existe($db, $modalidadeEsporteId)) {
         $erro = 'Selecione uma modalidade esportiva válida.';
     } elseif ($telefone !== '' && !in_array(strlen($telefone), [10, 11], true)) {
         $erro = 'Informe um telefone com DDD, no formato (11) 94647-6117.';
@@ -132,14 +127,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!in_array($extensao, $extensoesPermitidas, true)) {
                 $erro = 'A foto deve estar nos formatos JPG, JPEG, PNG, GIF ou WEBP.';
             } else {
-                $nomeArquivo = uniqid('', true) . '.' . $extensao;
-                $caminhoFoto = 'arquivos/' . $nomeArquivo;
+                $infoImagem = @getimagesize($foto['tmp_name']);
+                $mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
 
-                if (!move_uploaded_file($foto['tmp_name'], __DIR__ . '/' . $caminhoFoto)) {
-                    $erro = 'Não foi possível salvar a nova foto. Tente novamente.';
-                    $caminhoFoto = $fotoAtual;
+                if ($infoImagem === false || ($infoImagem['mime'] ?? '') !== $mimes[$extensao]) {
+                    $erro = 'A foto enviada não é uma imagem válida.';
                 } else {
-                    $novaFoto = true;
+                    try {
+                        $caminhoFoto = salvar_imagem($db, $foto, 'atletas');
+                        $novaFoto = true;
+                    } catch (Throwable) {
+                        $erro = 'Não foi possível salvar a nova foto. Tente novamente.';
+                        $caminhoFoto = $fotoAtual;
+                    }
                 }
             }
         }
@@ -148,38 +148,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($erro === null) {
         $senhaHash = $senha !== '' ? password_hash($senha, PASSWORD_DEFAULT) : (string) $atleta['senha'];
 
-        $update = $mysqli->prepare(
-            'UPDATE cadastro_atletas SET
-                foto = ?, nome = ?, rg = ?, cpf = ?, endereco = ?, numero = ?, cep = ?,
-                municipio = ?, cidade = ?, data_nascimento = ?, email = ?, senha = ?, telefone = ?,
-                modalidade_esporte_id = ?
-             WHERE id = ?'
-        );
+        $atualizados = $db->update('cadastro_atletas', [
+            'foto' => $caminhoFoto,
+            'nome' => $valores['nome'],
+            'rg' => $valores['rg'],
+            'cpf' => $cpf,
+            'endereco' => $valores['endereco'],
+            'numero' => $valores['numero'],
+            'cep' => $cep,
+            'municipio' => $valores['municipio'],
+            'cidade' => $valores['cidade'],
+            'data_nascimento' => $dataNormalizada,
+            'email' => $valores['email'],
+            'senha' => $senhaHash,
+            'telefone' => $telefone,
+            'modalidade_esporte_id' => $modalidadeEsporteId,
+        ], ['id' => $id]);
 
-        $update->bind_param(
-            'sssssssssssssii',
-            $caminhoFoto,
-            $valores['nome'],
-            $valores['rg'],
-            $cpf,
-            $valores['endereco'],
-            $valores['numero'],
-            $cep,
-            $valores['municipio'],
-            $valores['cidade'],
-            $dataNormalizada,
-            $valores['email'],
-            $senhaHash,
-            $telefone,
-            $modalidadeEsporteId,
-            $id
-        );
-
-        if ($update->execute()) {
-            $update->close();
-
-            if ($novaFoto && $temFotoAtual && str_starts_with($fotoAtual, 'arquivos/')) {
-                @unlink(__DIR__ . '/' . $fotoAtual);
+        if ($atualizados !== []) {
+            if ($novaFoto) {
+                remover_imagem($db, $fotoAtual);
             }
 
             header('Location: atletas.php?sucesso=atualizado');
@@ -187,11 +175,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $erro = 'Erro ao atualizar o atleta. Tente novamente.';
-        $update->close();
     }
 }
 
-$modalidadesEsporte = buscar_modalidades_esporte($mysqli);
+$modalidadesEsporte = buscar_modalidades_esporte($db);
 
 render_layout_start('Editar atleta', 'atletas', 'Atualize os dados do atleta no sistema.');
 ?>

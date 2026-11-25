@@ -32,29 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $consulta = $mysqli->prepare(
-            'SELECT (SELECT COUNT(*) FROM cadastro_atletas a WHERE a.modalidade_esporte_id = ?) AS total_atletas'
-        );
-        $consulta->bind_param('i', $id);
-        $consulta->execute();
-        $vinculados = (int) ($consulta->get_result()->fetch_assoc()['total_atletas'] ?? 0);
-        $consulta->close();
+        $vinculados = $db->count('cadastro_atletas', ['modalidade_esporte_id' => $id]);
 
         if ($vinculados > 0) {
             header('Location: modalidades_esporte.php?aviso=em-uso');
             exit;
         }
 
-        $delete = $mysqli->prepare('DELETE FROM modalidades_esporte WHERE id = ?');
-        $delete->bind_param('i', $id);
+        $removidas = $db->delete('modalidades_esporte', ['id' => $id]);
 
-        if ($delete->execute()) {
-            $delete->close();
+        if ($removidas > 0) {
             header('Location: modalidades_esporte.php?sucesso=excluido');
             exit;
         }
 
-        $delete->close();
         $erro = 'Não foi possível excluir a modalidade. Tente novamente.';
         $acao = 'excluir';
     } else {
@@ -66,16 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erro = 'O nome da modalidade deve ter no máximo 80 caracteres.';
         } else {
             if ($postAcao === 'atualizar' && $id > 0) {
-                $consulta = $mysqli->prepare('SELECT id FROM modalidades_esporte WHERE nome = ? AND id <> ? LIMIT 1');
-                $consulta->bind_param('si', $nome, $id);
+                $duplicado = $db->count('modalidades_esporte', [
+                    'nome' => $nome,
+                    'id' => 'neq.' . $id,
+                ]) > 0;
             } else {
-                $consulta = $mysqli->prepare('SELECT id FROM modalidades_esporte WHERE nome = ? LIMIT 1');
-                $consulta->bind_param('s', $nome);
+                $duplicado = $db->count('modalidades_esporte', ['nome' => $nome]) > 0;
             }
-            $consulta->execute();
-            $consulta->store_result();
-            $duplicado = $consulta->num_rows > 0;
-            $consulta->close();
 
             if ($duplicado) {
                 $erro = $postAcao === 'atualizar'
@@ -86,37 +74,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($erro === null) {
             if ($postAcao === 'atualizar' && $id > 0) {
-                $stmt = $mysqli->prepare('UPDATE modalidades_esporte SET nome = ?, descricao = ? WHERE id = ?');
-                $stmt->bind_param('ssi', $nome, $descricao, $id);
+                $salvo = $db->update('modalidades_esporte', [
+                    'nome' => $nome,
+                    'descricao' => $descricao,
+                ], ['id' => $id]);
                 $sucesso = 'atualizado';
             } else {
-                $stmt = $mysqli->prepare('INSERT INTO modalidades_esporte (nome, descricao) VALUES (?, ?)');
-                $stmt->bind_param('ss', $nome, $descricao);
+                $salvo = $db->insert('modalidades_esporte', [
+                    'nome' => $nome,
+                    'descricao' => $descricao,
+                ]);
                 $sucesso = 'cadastrado';
             }
 
-            if ($stmt->execute()) {
-                $stmt->close();
+            if ($salvo !== []) {
                 header('Location: modalidades_esporte.php?sucesso=' . $sucesso);
                 exit;
             }
 
-            $stmt->close();
             $erro = 'Não foi possível salvar a modalidade. Tente novamente.';
         }
     }
 }
 
 if (($acao === 'editar' || $acao === 'excluir') && $id > 0) {
-    $stmt = $mysqli->prepare(
-        'SELECT t.*,
-            (SELECT COUNT(*) FROM cadastro_atletas a WHERE a.modalidade_esporte_id = t.id) AS total_atletas
-         FROM modalidades_esporte t WHERE t.id = ? LIMIT 1'
-    );
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $modalidadeSelecionada = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    $modalidadeSelecionada = $db->selectOne('modalidades_esporte', '*', ['id' => $id]) ?? [];
 
     if (!$modalidadeSelecionada) {
         render_layout_start('Modalidade não encontrada', 'esportes');
@@ -146,7 +128,7 @@ if (($acao === 'editar' || $acao === 'excluir') && $id > 0) {
         exit;
     }
 
-    $totalAtletasVinculados = (int) $modalidadeSelecionada['total_atletas'];
+    $totalAtletasVinculados = $db->count('cadastro_atletas', ['modalidade_esporte_id' => $id]);
     if ($acao === 'editar' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         $valores = [
             'nome' => (string) $modalidadeSelecionada['nome'],
@@ -160,16 +142,18 @@ if (($acao === 'editar' || $acao === 'excluir') && $id <= 0) {
     exit;
 }
 
-$sqlModalidades = 'SELECT t.*,
-    (SELECT COUNT(*) FROM cadastro_atletas a WHERE a.modalidade_esporte_id = t.id) AS total_atletas
-    FROM modalidades_esporte t ORDER BY t.nome ASC';
-$queryModalidades = $mysqli->query($sqlModalidades);
-
-if (!$queryModalidades) {
-    die('Erro na consulta ao banco de dados: ' . e($mysqli->error));
+$modalidades = $db->select('modalidades_esporte', '*', [], 'nome ASC');
+$atletasPorModalidade = $db->select('cadastro_atletas', 'modalidade_esporte_id');
+$contagemAtletas = [];
+foreach ($atletasPorModalidade as $atleta) {
+    $chave = (int) ($atleta['modalidade_esporte_id'] ?? 0);
+    $contagemAtletas[$chave] = ($contagemAtletas[$chave] ?? 0) + 1;
 }
+foreach ($modalidades as &$modalidade) {
+    $modalidade['total_atletas'] = $contagemAtletas[(int) $modalidade['id']] ?? 0;
+}
+unset($modalidade);
 
-$modalidades = $queryModalidades->fetch_all(MYSQLI_ASSOC);
 $totalModalidadesCadastradas = count($modalidades);
 $totalAtletasComModalidade = array_sum(array_column($modalidades, 'total_atletas'));
 

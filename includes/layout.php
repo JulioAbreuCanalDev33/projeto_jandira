@@ -1,16 +1,19 @@
 <?php
 declare(strict_types=1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
 require_once __DIR__ . '/env.php';
 load_env(APP_ROOT . '/.env');
+require_once __DIR__ . '/supabase.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    // A Vercel não mantém arquivos de sessão entre funções: guardamos no Supabase.
+    session_set_save_handler(new SupabaseSessionHandler(supabase_db()), true);
+    session_start();
+}
 
 /**
  * Caminho relativo da aplicação em relação à raiz do servidor.

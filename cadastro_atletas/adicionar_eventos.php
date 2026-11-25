@@ -34,24 +34,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dataInicio = $inicio->format('Y-m-d H:i:s');
         $dataFim = $fim->format('Y-m-d H:i:s');
 
-        $stmt = $mysqli->prepare(
-            'INSERT INTO eventos (titulo, descricao, data_inicio, data_fim) VALUES (?, ?, ?, ?)'
-        );
-        $stmt->bind_param('ssss', $valores['titulo'], $valores['descricao'], $dataInicio, $dataFim);
+        $evento = $db->insert('eventos', [
+            'titulo' => $valores['titulo'],
+            'descricao' => $valores['descricao'],
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim,
+        ]);
 
-        if ($stmt->execute()) {
-            $stmt->close();
+        if ($evento !== []) {
             header('Location: adicionar_eventos.php?sucesso=1');
             exit;
         }
 
         $erro = 'Não foi possível cadastrar o evento. Tente novamente.';
-        $stmt->close();
     }
 }
 
-$queryEventos = $mysqli->query('SELECT * FROM eventos ORDER BY data_inicio DESC');
-$eventos = $queryEventos ? $queryEventos->fetch_all(MYSQLI_ASSOC) : [];
+$eventos = $db->select('eventos', '*', [], 'data_inicio DESC');
 $totalEventos = count($eventos);
 
 $meses = [

@@ -1,15 +1,8 @@
 <?php
 
-$host = getenv('DB_HOST') ?: 'localhost';
-$db = getenv('DB_NAME') ?: 'projeto_jandira';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : '1234';
+require_once __DIR__ . '/../includes/supabase.php';
 
-$mysqli = new mysqli($host, $user, $pass, $db);
-if ($mysqli->connect_errno) {
-	// code...
-	die("Falha na conexão com o banco de dados");
-}
+$db = supabase_db();
 
 function formatar_data($data){
 	return implode('/', array_reverse(explode('-', $data)));
@@ -62,26 +55,35 @@ function formatar_cpf($cpf) {
 	return "$part1.$part2.$part3-$part4";
 }
 
-function buscar_modalidades_esporte(mysqli $mysqli): array {
-	$resultado = $mysqli->query('SELECT id, nome FROM modalidades_esporte ORDER BY nome ASC');
-	return $resultado ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
+function buscar_modalidades_esporte(SupabaseDb $db): array {
+	return $db->select('modalidades_esporte', 'id, nome', [], 'nome ASC');
 }
 
-function modalidade_esporte_existe(mysqli $mysqli, int $id): bool {
+function modalidade_esporte_existe(SupabaseDb $db, int $id): bool {
 	if ($id <= 0) {
 		return false;
 	}
 
-	$stmt = $mysqli->prepare('SELECT 1 FROM modalidades_esporte WHERE id = ? LIMIT 1');
-	if (!$stmt) {
-		return false;
+	return $db->count('modalidades_esporte', ['id' => $id]) > 0;
+}
+
+/**
+ * Envia uma imagem para o Supabase Storage e devolve a URL pública.
+ */
+function salvar_imagem(SupabaseDb $db, array $arquivo, string $pasta): string {
+	$conteudo = file_get_contents($arquivo['tmp_name']);
+	if ($conteudo === false) {
+		throw new RuntimeException('Não foi possível ler a imagem enviada.');
 	}
 
-	$stmt->bind_param('i', $id);
-	$stmt->execute();
-	$stmt->store_result();
-	$existe = $stmt->num_rows > 0;
-	$stmt->close();
+	$extensao = strtolower(pathinfo((string) $arquivo['name'], PATHINFO_EXTENSION));
+	$objeto = $pasta . '/' . bin2hex(random_bytes(16)) . '.' . $extensao;
 
-	return $existe;
+	return $db->storageUpload('arquivos', $objeto, $conteudo, (string) mime_content_type($arquivo['tmp_name']));
+}
+
+function remover_imagem(SupabaseDb $db, string $url): void {
+	if ($url !== '') {
+		$db->removerArquivoPublico($url);
+	}
 }

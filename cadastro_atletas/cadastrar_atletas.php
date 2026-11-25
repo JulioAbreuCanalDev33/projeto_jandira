@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Informe um e-mail válido.';
     } elseif ($dataNormalizada === null) {
         $erro = 'Informe uma data de nascimento válida.';
-    } elseif (!modalidade_esporte_existe($mysqli, $modalidadeEsporteId)) {
+    } elseif (!modalidade_esporte_existe($db, $modalidadeEsporteId)) {
         $erro = 'Selecione uma modalidade esportiva válida.';
     } elseif ($telefone !== '' && !in_array(strlen($telefone), [10, 11], true)) {
         $erro = 'Informe um telefone com DDD, no formato (11) 94647-6117.';
@@ -78,13 +78,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!in_array($extensao, $extensoesPermitidas, true)) {
                     $erro = 'A foto deve estar nos formatos JPG, JPEG, PNG, GIF ou WEBP.';
                 } else {
-                    $nomeArquivo = uniqid('', true) . '.' . $extensao;
-                    $caminhoFoto = 'arquivos/' . $nomeArquivo;
-                    $destino = __DIR__ . '/' . $caminhoFoto;
+                    $infoImagem = @getimagesize($foto['tmp_name']);
+                    $mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
 
-                    if (!move_uploaded_file($foto['tmp_name'], $destino)) {
-                        $erro = 'Não foi possível salvar a foto. Tente novamente.';
-                        $caminhoFoto = null;
+                    if ($infoImagem === false || ($infoImagem['mime'] ?? '') !== $mimes[$extensao]) {
+                        $erro = 'A foto enviada não é uma imagem válida.';
+                    } else {
+                        try {
+                            $caminhoFoto = salvar_imagem($db, $foto, 'atletas');
+                        } catch (Throwable) {
+                            $erro = 'Não foi possível salvar a foto. Tente novamente.';
+                            $caminhoFoto = null;
+                        }
                     }
                 }
             }
@@ -94,42 +99,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($erro === null && $caminhoFoto !== null) {
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
-        $stmt = $mysqli->prepare(
-            'INSERT INTO cadastro_atletas
-                (nome, rg, cpf, endereco, numero, cep, municipio, cidade, data_nascimento, email, senha, telefone, modalidade_esporte_id, foto)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $registro = $db->insert('cadastro_atletas', [
+            'nome' => $valores['nome'],
+            'rg' => $valores['rg'],
+            'cpf' => $cpf,
+            'endereco' => $valores['endereco'],
+            'numero' => $valores['numero'],
+            'cep' => $cep,
+            'municipio' => $valores['municipio'],
+            'cidade' => $valores['cidade'],
+            'data_nascimento' => $dataNormalizada,
+            'email' => $valores['email'],
+            'senha' => $senhaHash,
+            'telefone' => $telefone,
+            'modalidade_esporte_id' => $modalidadeEsporteId,
+            'foto' => $caminhoFoto,
+        ]);
 
-        $stmt->bind_param(
-            'sssssssssssssi',
-            $valores['nome'],
-            $valores['rg'],
-            $cpf,
-            $valores['endereco'],
-            $valores['numero'],
-            $cep,
-            $valores['municipio'],
-            $valores['cidade'],
-            $dataNormalizada,
-            $valores['email'],
-            $senhaHash,
-            $telefone,
-            $modalidadeEsporteId,
-            $caminhoFoto
-        );
-
-        if ($stmt->execute()) {
-            $stmt->close();
+        if ($registro !== []) {
             header('Location: atletas.php?sucesso=cadastrado');
             exit;
         }
 
         $erro = 'Erro ao cadastrar o atleta. Tente novamente.';
-        $stmt->close();
     }
 }
 
-$modalidadesEsporte = buscar_modalidades_esporte($mysqli);
+$modalidadesEsporte = buscar_modalidades_esporte($db);
 
 render_layout_start('Novo atleta', 'atletas', 'Cadastre um novo atleta na plataforma de gestão esportiva de Jandira.');
 ?>

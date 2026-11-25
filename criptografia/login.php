@@ -20,12 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $senha === '') {
         $erro = 'Informe o e-mail e a senha para entrar.';
     } else {
-        $stmt = $mysqli->prepare('SELECT id, email, senha FROM senhas WHERE email = ? LIMIT 1');
-        $stmt->bind_param('s', $email);
-        $stmt->execute();
-        $resultado = $stmt->get_result();
-        $usuario = $resultado->fetch_assoc();
-        $stmt->close();
+        $usuario = $db->selectOne('senhas', 'id, email, senha', ['email' => $email]);
 
         if ($usuario && password_verify($senha, (string) $usuario['senha'])) {
             session_regenerate_id(true);

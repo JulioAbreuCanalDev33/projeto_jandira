@@ -11,11 +11,7 @@ require_once __DIR__ . '/conexao.php';
 require_csrf();
 
 $usuarioId = (int) $_SESSION['usuario'];
-$stmtUsuario = $mysqli->prepare('SELECT id, email FROM senhas WHERE id = ? LIMIT 1');
-$stmtUsuario->bind_param('i', $usuarioId);
-$stmtUsuario->execute();
-$usuarioAtual = $stmtUsuario->get_result()->fetch_assoc();
-$stmtUsuario->close();
+$usuarioAtual = $db->selectOne('senhas', 'id, email', ['id' => $usuarioId]);
 
 if (!$usuarioAtual) {
     session_destroy();
@@ -38,36 +34,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($senhaNova !== $confirmacao) {
         $erro = 'A confirmação de senha não confere.';
     } else {
-        $verifica = $mysqli->prepare('SELECT id FROM senhas WHERE email = ? LIMIT 1');
-        $verifica->bind_param('s', $emailNovo);
-        $verifica->execute();
-        $verifica->store_result();
-
-        if ($verifica->num_rows > 0) {
+        if ($db->count('senhas', ['email' => $emailNovo]) > 0) {
             $erro = 'Já existe um usuário cadastrado com este e-mail.';
         }
 
-        $verifica->close();
-
         if ($erro === null) {
             $senhaHash = password_hash($senhaNova, PASSWORD_DEFAULT);
-            $insert = $mysqli->prepare('INSERT INTO senhas (email, senha) VALUES (?, ?)');
-            $insert->bind_param('ss', $emailNovo, $senhaHash);
+            $novoUsuario = $db->insert('senhas', [
+                'email' => $emailNovo,
+                'senha' => $senhaHash,
+            ]);
 
-            if ($insert->execute()) {
-                $insert->close();
+            if ($novoUsuario !== []) {
                 header('Location: index.php?sucesso=usuario');
                 exit;
             }
 
             $erro = 'Não foi possível cadastrar o novo acesso. Tente novamente.';
-            $insert->close();
         }
     }
 }
 
-$queryUsuarios = $mysqli->query('SELECT id, email FROM senhas ORDER BY email ASC');
-$usuarios = $queryUsuarios ? $queryUsuarios->fetch_all(MYSQLI_ASSOC) : [];
+$usuarios = $db->select('senhas', 'id, email', [], 'email ASC');
 
 $acoesPainel = '<a href="' . e(app_url('cadastro_atletas/cadastrar_atletas.php')) . '" class="btn btn-brand"><i class="bi bi-person-plus" aria-hidden="true"></i> Novo atleta</a>'
     . '<form method="post" action="' . e(app_url('criptografia/logout.php')) . '" class="d-inline">'

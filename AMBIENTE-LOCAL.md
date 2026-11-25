@@ -1,57 +1,52 @@
 # Ambiente local — Projeto Jandira
 
-Este documento descreve o ambiente de desenvolvimento configurado nesta máquina.
+Este documento descreve como executar o projeto localmente e como ele se conecta ao Supabase.
 
 ## Acesso
 
-- **Site:** http://localhost:8000
-- **Banco:** MySQL em `127.0.0.1:3306`
-- **Banco de dados:** `projeto_jandira`
-- **Usuário:** `root`
-- **Senha:** `1234`
+- **Site local:** http://localhost:8000
+- **Site publicado:** https://jandira-esportes-git-main-julio-abreu-s-projects-bc318a1c.vercel.app
+- **Banco e arquivos:** Supabase (projeto `fitaluno`, plano free)
+
+O MySQL local não é mais usado pela aplicação. Os scripts `iniciar-local.ps1` e `parar-local.ps1` ainda podem iniciar/encerrar o MySQL por hábito do ambiente antigo, mas o Jandira lê e grava direto no Supabase.
 
 ## Como iniciar
 
-No PowerShell, dentro da pasta do projeto:
+No Linux ou macOS, dentro da pasta do projeto:
+
+```bash
+php -S 127.0.0.1:8000 -t .
+```
+
+No Windows, o script existente continua válido para subir o PHP na porta 8000:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\iniciar-local.ps1
 ```
 
-O script:
-
-1. Sobe o MySQL local (se ainda não estiver ativo).
-2. Sobe o servidor PHP embutido na porta `8000`.
-3. Abre o navegador em http://localhost:8000.
-
-Também é possível dar dois cliques em `iniciar-local.ps1` (Executar com PowerShell).
-
-## Como parar
+Para encerrar o servidor:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\parar-local.ps1
 ```
 
-## Estrutura do ambiente
+## Configuração
 
-| Item | Caminho |
-| --- | --- |
-| PHP 8.4 (portátil) | `C:\Users\WTINFO PC\.local\jandira\php` |
-| Dados do MySQL | `C:\Users\WTINFO PC\.local\jandira\mysql\data` |
-| Configuração do MySQL | `C:\Users\WTINFO PC\.local\jandira\mysql\my.ini` |
-| Log de erros do MySQL | `C:\Users\WTINFO PC\.local\jandira\mysql\error.log` |
-
-O PHP e o MySQL ficam fora do repositório, então não entram no Git.
-
-## Variáveis de ambiente
-
-As credenciais de e-mail não ficam mais no código. Para configurar o envio:
+Copie o modelo e preencha com os dados do seu projeto Supabase:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Depois preencha o `.env`:
+```dotenv
+APP_ENV=local
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_KEY=sua-chave-secreta-do-supabase
+```
+
+A chave secreta vai **somente** no `.env` local e nas variáveis de ambiente da Vercel. Ela nunca é enviada ao navegador e não pode ser versionada. O `.env` está no `.gitignore`.
+
+Para configurar o envio de e-mail, complete também:
 
 ```dotenv
 MAIL_HOST=smtp.gmail.com
@@ -66,16 +61,18 @@ MAIL_TO_NAME="Equipe Projeto Jandira"
 MAIL_DEBUG=0
 ```
 
-As conexões com o banco de atletas, arquivos e área restrita também leem `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASS` do `.env` (com valores padrão para o ambiente local):
+## Banco no Supabase
 
-```dotenv
-DB_HOST=127.0.0.1
-DB_NAME=projeto_jandira
-DB_USER=root
-DB_PASS=1234
-```
+1. Abra o SQL Editor do projeto Supabase.
+2. Execute o arquivo `supabase/schema_jandira.sql` completo. Ele cria as tabelas, os índices, os dados iniciais, ativa RLS e cria o bucket público `arquivos`.
+3. O schema pode ser executado mais de uma vez sem duplicar registros.
 
-O arquivo `.env` está no `.gitignore` e nunca deve ser versionado.
+As variáveis usadas em produção na Vercel são:
+
+| Variável | Tipo | Uso |
+| --- | --- | --- |
+| `SUPABASE_URL` | Secret | Endereço do projeto Supabase |
+| `SUPABASE_SERVICE_KEY` | Secret | Chave secreta do servidor (acesso às tabelas e ao Storage) |
 
 ## Módulos
 
@@ -97,15 +94,16 @@ O arquivo `.env` está no `.gitignore` e nunca deve ser versionado.
 
 ## Tabelas do banco
 
-- `cadastro_atletas` — 2 registros
+Após executar o schema e os seeds:
+
 - `modalidades_esporte` — 5 registros
+- `cadastro_atletas` — 2 registros
 - `eventos` — 1 registro
-- `senhas` — 5 registros
-- `arquivos` — 3 registros
+- `senhas` — 3 registros
+- `arquivos` — 7 registros
+- `sessoes` — criadas automaticamente quando há usuários navegando
 
-A antiga tabela `veiculos`, usada apenas como teste de busca, foi removida.
-
-Para bancos já existentes, execute `cadastro_atletas/migracao_modalidades_esporte.sql`: ela renomeia `tipos_esporte` para `modalidades_esporte` e `tipo_esporte_id` para `modalidade_esporte_id`, preservando os dados e podendo ser rodada mais de uma vez. Em instalações do zero, importe `modalidades_esporte.sql` antes de `cadastro_atletas.sql`, pois a tabela de atletas referencia as modalidades.
+As imagens das galerias e as fotos de atletas ficam no bucket público `arquivos` do Supabase Storage. Os arquivos `.sql` dentro de `cadastro_atletas/`, `criptografia/` e `upload/` são referências históricas do antigo banco MySQL; a fonte atual é `supabase/schema_jandira.sql`.
 
 ## Identidade visual e temas
 
@@ -124,13 +122,15 @@ Para bancos já existentes, execute `cadastro_atletas/migracao_modalidades_espor
 - Requisições sem token válido retornam a página “Sessão expirada” com HTTP 419.
 - Login com `password_hash`/`password_verify` e regeneração do ID de sessão.
 - Logout somente via POST com token CSRF.
-- Consultas com prepared statements.
-- Uploads validados por extensão e tamanho.
+- Consultas feitas via API REST do Supabase, sem concatenação de SQL.
+- RLS ativado nas tabelas: apenas a chave secreta do servidor acessa os dados.
+- Sessões gravadas no Supabase, necessárias porque a Vercel é stateless.
+- Uploads validados por extensão, MIME real, tamanho e nome aleatório; remoção do objeto no Storage.
 - Saída de dados escapada com `htmlspecialchars`.
-- Credenciais SMTP carregadas de variáveis de ambiente.
+- Credenciais e chaves carregadas de variáveis de ambiente.
 
 ## Observações
 
-- Os arquivos `conexao.php` ainda usam `root` / `1234`, iguais às credenciais do MySQL local.
 - O servidor PHP embutido é indicado para desenvolvimento, não para produção.
+- Em produção, a Vercel executa cada página como uma função isolada; por isso as sessões não ficam em arquivos.
 - O módulo de e-mail só dispara mensagens após o envio do formulário; abrir a página não envia nada.

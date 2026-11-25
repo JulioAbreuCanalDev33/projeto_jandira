@@ -9,7 +9,8 @@ Uma aplicação web para centralizar atletas, eventos, documentos e acessos da e
 <br/>
 
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-Hobby-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
@@ -229,7 +230,7 @@ Capturas reais da aplicação, em resolução desktop, com os dois temas dispon�
 - JavaScript leve, sem dependências além do Bootstrap.
 - Busca feita no cliente sobre linhas já renderizadas.
 - Imagens da galeria com `loading="lazy"`.
-- Conexões de banco com MySQLi e prepared statements.
+- Persistência via API REST do Supabase, com parâmetros enviados pelo cliente PHP.
 - Redirecionamento após POST (padrão PRG) para evitar reenvio de formulários.
 
 ---
@@ -253,16 +254,18 @@ flowchart LR
         E["Integrações<br/>PHPMailer · variáveis de ambiente"]
     end
 
-    subgraph Dados["Persistência"]
-        DB[("MySQL 8<br/>projeto_jandira")]
-        FS["Sistema de arquivos<br/>fotos e documentos"]
+    subgraph Dados["Persistência — Supabase"]
+        DB[("PostgreSQL<br/>tabelas do Jandira")]
+        ST[("Storage<br/>fotos e documentos")]
+        SE[("Sessões<br/>persistentes")]
     end
 
     B -->|HTTP| R
     R --> L
     R --> S
     R --> DB
-    R --> FS
+    R --> ST
+    R --> SE
     R --> E
     E -->|SMTP| SMTP["Servidor SMTP"]
 ```
@@ -281,7 +284,7 @@ flowchart LR
 
 1. O navegador solicita uma página PHP.
 2. `includes/layout.php` inicia a sessão, carrega o `.env`, define helpers e prepara o layout.
-3. A página consulta o MySQL com prepared statements.
+3. A página consulta o Supabase pela API REST (PostgREST).
 4. Em requisições POST, o token CSRF é validado antes de qualquer alteração.
 5. Os dados são validados e normalizados no servidor.
 6. A operação é executada e o usuário é redirecionado com uma mensagem de retorno.
@@ -294,12 +297,12 @@ sequenceDiagram
     autonumber
     actor U as Usuário
     participant A as Aplicação PHP
-    participant DB as MySQL
+    participant DB as Supabase
     participant S as Sessão
 
     U->>A: POST /criptografia/login.php<br/>e-mail · senha · CSRF
     A->>A: Valida token CSRF
-    A->>DB: SELECT id, email, senha WHERE email = ?
+    A->>DB: GET /rest/v1/senhas?email=eq.&lt;email&gt;
     DB-->>A: Hash armazenado
     A->>A: password_verify()
     A->>S: session_regenerate_id(true)
@@ -314,16 +317,16 @@ sequenceDiagram
     actor U as Equipe gestora
     participant A as Aplicação PHP
     participant V as Validação
-    participant FS as Uploads
-    participant DB as MySQL
+    participant ST as Supabase Storage
+    participant DB as Supabase
 
     U->>A: POST /cadastro_atletas/cadastrar_atletas.php
     A->>A: Verifica CSRF
     A->>V: Nome · e-mail · data · CPF · CEP · telefone · senha · modalidade
     V-->>A: Dados normalizados
-    A->>DB: SELECT 1 FROM modalidades_esporte WHERE id = ?
-    A->>FS: move_uploaded_file(foto)
-    A->>DB: INSERT com prepared statement
+    A->>DB: GET /rest/v1/modalidades_esporte?id=eq.&lt;id&gt;
+    A->>ST: POST /storage/v1/object/arquivos/atletas/...
+    A->>DB: POST /rest/v1/cadastro_atletas
     DB-->>A: Registro criado
     A-->>U: 302 /atletas.php?sucesso=cadastrado
 ```
@@ -339,7 +342,7 @@ projeto_jandira/
 │   └── js/
 │       └── site.js               # tema, busca, máscaras, preview e confirmações
 ├── cadastro_atletas/
-│   ├── conexao.php               # conexão e helpers de formatação
+│   ├── conexao.php               # cliente Supabase e helpers de formatação
 │   ├── atletas.php               # listagem e busca
 │   ├── cadastrar_atletas.php            # cadastro com upload
 │   ├── editar_atletas.php               # edição e troca de foto
@@ -351,7 +354,7 @@ projeto_jandira/
 │   ├── cadastro_atletas.sql             # estrutura da tabela de atletas
 │   └── eventos.sql                      # estrutura da tabela de eventos
 ├── criptografia/
-│   ├── conexao.php               # conexão da área restrita
+│   ├── conexao.php               # cliente Supabase da área restrita
 │   ├── login.php                 # autenticação
 │   ├── logout.php                # encerramento seguro da sessão
 │   ├── index.php                 # painel e gestão de acessos
@@ -362,13 +365,16 @@ projeto_jandira/
 │   ├── composer.lock             # versões travadas das dependências
 │   └── vendor/                   # PHPMailer instalado
 ├── includes/
-│   ├── layout.php                # header, footer, helpers e CSRF
-│   └── env.php                   # carregamento de variáveis de ambiente
+│   ├── layout.php                # header, footer, CSRF e sessão persistente
+│   ├── env.php                   # carregamento de variáveis de ambiente
+│   └── supabase.php              # cliente REST, Storage e sessões
+├── supabase/
+│   └── schema_jandira.sql        # tabelas, seeds, RLS e bucket de imagens
 ├── upload/
 │   ├── index.php                 # upload e galeria
-│   ├── conexao.php               # conexão do módulo
+│   ├── conexao.php               # cliente Supabase do módulo
 │   └── upload.sql                # estrutura da tabela de arquivos
-├── .env.example                  # modelo de configuração (banco e SMTP)
+├── .env.example                  # modelo de configuração (Supabase e SMTP)
 ├── .gitignore                    # proteção de credenciais e temporários
 ├── index.php                     # página inicial
 ├── AMBIENTE-LOCAL.md             # documentação do ambiente de desenvolvimento
@@ -383,8 +389,8 @@ projeto_jandira/
 | Tecnologia | Versão | Papel no projeto |
 | --- | --- | --- |
 | ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?style=flat-square&logo=php&logoColor=white) | 8.4 | Backend, renderização server-side, sessão e regras de negócio |
-| ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white) | 8.0 | Persistência de atletas, eventos, usuários e arquivos |
-| ![MySQLi](https://img.shields.io/badge/MySQLi-driver-4479A1?style=flat-square&logo=mysql&logoColor=white) | Nativo | Conexão e prepared statements |
+| ![Supabase](https://img.shields.io/badge/Supabase-Free-3ECF8E?style=flat-square&logo=supabase&logoColor=white) | Free | PostgreSQL, Storage, RLS e sessões persistentes |
+| ![PostgREST](https://img.shields.io/badge/PostgREST-REST-2F2F2F?style=flat-square) | REST | Consultas e escritas via HTTPS com chave secreta no servidor |
 | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=flat-square&logo=bootstrap&logoColor=white) | 5.3.3 | Grid responsivo, componentes e acessibilidade base |
 | ![Bootstrap Icons](https://img.shields.io/badge/Bootstrap%20Icons-1.11-7952B3?style=flat-square&logo=bootstrap&logoColor=white) | 1.11.3 | Iconografia da interface |
 | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white) | 5 | Estrutura semântica das páginas |
@@ -400,7 +406,7 @@ projeto_jandira/
 
 - **Framework PHP completo:** o projeto prioriza clareza didática e controle explícito do fluxo.
 - **Framework SPA:** a aplicação é server-rendered; não há necessidade de um bundle JavaScript.
-- **ORM:** as consultas são poucas e explícitas, com prepared statements.
+- **ORM:** as operações são poucas e explícitas, feitas via API REST do Supabase.
 - **Etapa de build:** o CSS e o JavaScript são servidos diretamente, sem transpilação.
 
 ---
@@ -449,47 +455,57 @@ A identidade visual foi inspirada no portal oficial da Prefeitura de Jandira: az
 
 ## 🗄️ Banco de dados
 
-O banco `projeto_jandira` é composto por quatro tabelas independentes. Não há chaves estrangeiras: cada módulo evolui de forma autônoma.
+Os dados do Jandira ficam no projeto Supabase **fitaluno**, no plano free, em PostgreSQL. O schema completo está em `supabase/schema_jandira.sql` e pode ser aplicado pelo SQL Editor. As tabelas têm RLS ativado: somente a chave secreta configurada no servidor consegue ler e alterar os registros; a chave publicável do Supabase não tem acesso.
 
 ```mermaid
 erDiagram
+    MODALIDADES_ESPORTE ||--o{ CADASTRO_ATLETAS : "possui"
+    MODALIDADES_ESPORTE {
+        int id PK
+        varchar nome UK
+        text descricao
+        timestamp data_cadastro
+    }
     CADASTRO_ATLETAS {
         int id PK
-        varchar foto
-        varchar nome
-        varchar rg
-        varchar cpf
-        varchar endereco
-        varchar numero
-        varchar cep
-        varchar municipio
-        varchar cidade
+        text foto
+        text nome
+        text rg
+        text cpf
+        text endereco
+        text numero
+        text cep
+        text municipio
+        text cidade
         date data_nascimento
-        varchar email
-        varchar senha
-        varchar telefone
-        datetime data_cadastro
+        text email
+        text senha
+        text telefone
+        int modalidade_esporte_id FK
+        timestamp data_cadastro
     }
-
     EVENTOS {
         int id PK
-        varchar titulo
+        text titulo
         text descricao
-        datetime data_inicio
-        datetime data_fim
+        timestamp data_inicio
+        timestamp data_fim
     }
-
     SENHAS {
         int id PK
-        varchar senha
-        varchar email
+        text senha
+        text email UK
     }
-
     ARQUIVOS {
         int id PK
-        varchar nome
-        varchar path
-        datetime data_upload
+        text nome
+        text path
+        timestamp data_upload
+    }
+    SESSOES {
+        text id PK
+        text dados
+        timestamptz atualizado_em
     }
 ```
 
@@ -497,13 +513,14 @@ erDiagram
 
 | Tabela | Conteúdo | Observações |
 | --- | --- | --- |
-| `cadastro_atletas` | Dados pessoais, endereço, contato, senha, foto e modalidade | A senha é armazenada com hash; `modalidade_esporte_id` referencia `modalidades_esporte` |
 | `modalidades_esporte` | Nome, descrição e data de cadastro das modalidades | Nome único; modalidades com atletas vinculados não podem ser excluídas |
+| `cadastro_atletas` | Dados pessoais, endereço, contato, senha, foto e modalidade | Senha com hash; `modalidade_esporte_id` referencia `modalidades_esporte` |
 | `eventos` | Título, descrição, início e término | O período é validado na aplicação |
-| `senhas` | E-mail e hash de senha da equipe gestora | Acesso ao painel administrativo |
-| `arquivos` | Nome original, caminho e data de upload | O arquivo físico fica em `upload/arquivos/` |
+| `senhas` | E-mail e hash de senha da equipe gestora | E-mail único; acesso ao painel administrativo |
+| `arquivos` | Nome original, URL pública e data de upload | A imagem fica no bucket `arquivos` do Supabase Storage |
+| `sessoes` | Dados serializados das sessões PHP | Necessária porque a Vercel não mantém arquivos de sessão entre funções |
 
-Para bancos já existentes, aplique `cadastro_atletas/migracao_modalidades_esporte.sql`: ela renomeia a estrutura antiga (`tipos_esporte` / `tipo_esporte_id`) preservando os dados e pode ser executada mais de uma vez. Em uma instalação limpa, importe `modalidades_esporte.sql` antes de `cadastro_atletas.sql` para satisfazer a chave estrangeira.
+Fotos e documentos são enviados ao bucket público `arquivos` do Supabase Storage; o banco guarda somente a URL. Os arquivos `.sql` em `cadastro_atletas/`, `criptografia/` e `upload/` são referências históricas do antigo banco MySQL — para instalar o projeto, use `supabase/schema_jandira.sql`.
 
 ---
 
@@ -515,13 +532,13 @@ Para bancos já existentes, aplique `cadastro_atletas/migracao_modalidades_espor
 | --- | --- |
 | **CSRF** | Token de 256 bits por sessão, campo oculto nos formulários e validação antes de qualquer POST |
 | **Falha de CSRF** | Página amigável com HTTP 419 e orientação para recarregar |
-| **SQL Injection** | Prepared statements em todas as consultas com entrada do usuário |
+| **SQL Injection** | Consultas via PostgREST com valores passados como filtros/body; sem concatenação de SQL |
 | **XSS** | Escaping centralizado com `htmlspecialchars` via helper `e()` |
 | **Senhas** | `password_hash` com `PASSWORD_DEFAULT` e `password_verify` |
 | **Fixação de sessão** | `session_regenerate_id(true)` após login bem-sucedido |
 | **Logout** | Somente via POST com token CSRF e destruição completa da sessão |
-| **Upload** | Validação de extensão, MIME real, tamanho, nome aleatório e `move_uploaded_file` |
-| **Segredos** | Credenciais de banco e SMTP em `.env`, com `.env.example` versionado e `.env` ignorado |
+| **Upload** | Validação de extensão, MIME real, tamanho e nome aleatório; arquivos enviados ao Supabase Storage |
+| **Segredos** | Chave secreta do Supabase e credenciais SMTP em variáveis de ambiente; `.env` ignorado pelo Git |
 | **Erros** | Mensagens genéricas para o usuário, sem exposição de stack trace ou credenciais |
 
 ### Evoluções recomendadas para produção
@@ -535,6 +552,16 @@ Para bancos já existentes, aplique `cadastro_atletas/migracao_modalidades_espor
 - Rotação de credenciais e uso de senha de aplicativo no SMTP.
 - Backup automatizado do banco e dos arquivos enviados.
 - Testes automatizados e pipeline de integração contínua.
+
+---
+
+## 🌐 Publicação
+
+A aplicação é publicada na Vercel (plano Hobby) em:
+
+**https://jandira-esportes-git-main-julio-abreu-s-projects-bc318a1c.vercel.app**
+
+O `vercel.json` declara 12 funções PHP — limite do plano — e mantém os atalhos amigáveis (`/atletas`, `/modalidades-de-esporte`, `/eventos`, `/arquivos`, `/login`, `/painel`). As variáveis `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` ficam configuradas como secrets no projeto da Vercel; localmente, no `.env`. Para publicar, basta fazer push na branch `main`.
 
 ---
 
@@ -552,7 +579,8 @@ O projeto foi validado em fluxos reais, com foco em consistência visual, integr
 | **CSRF** | POST sem token retorna HTTP 419; POST com token executa a ação |
 | **Eventos** | Criação, listagem e validação de período |
 | **Atletas** | Edição com preservação de senha e atualização de dados |
-| **Uploads** | Envio, exibição, exclusão e limpeza do arquivo físico |
+| **Uploads** | Envio, exibição, exclusão e remoção do objeto no Supabase Storage |
+| **Supabase** | Tabelas, seeds, bucket público, RLS e sessões persistentes validados |
 | **Tema** | Alternância, persistência e preferência do sistema |
 | **Console** | Páginas principais sem erros de JavaScript |
 | **Responsividade** | Menu, formulários, tabelas e botões em breakpoints menores |
@@ -573,6 +601,9 @@ O projeto foi validado em fluxos reais, com foco em consistência visual, integr
 - [x] Proteção CSRF nos formulários.
 - [x] Credenciais SMTP em variáveis de ambiente.
 - [x] README de portfólio e documentação do ambiente.
+- [x] Modalidades de esporte padronizadas e vinculadas aos atletas.
+- [x] Persistência em Supabase/PostgreSQL com Storage e sessões persistentes.
+- [x] Publicação na Vercel (plano Hobby) com 12 funções PHP.
 
 ### Próximos passos
 
@@ -585,7 +616,6 @@ O projeto foi validado em fluxos reais, com foco em consistência visual, integr
 - [ ] Fila de envio de e-mails e templates institucionais.
 - [ ] Testes automatizados com PHPUnit e testes de interface.
 - [ ] Pipeline de CI/CD e análise estática.
-- [ ] Armazenamento de arquivos em nuvem.
 - [ ] Observabilidade, logs estruturados e monitoramento.
 - [ ] Adequação à LGPD e política de privacidade.
 

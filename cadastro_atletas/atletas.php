@@ -2,19 +2,20 @@
 require_once __DIR__ . '/../includes/layout.php';
 require_once __DIR__ . '/conexao.php';
 
-$sqlAtletas = 'SELECT a.*, t.nome AS modalidade_esporte_nome
-    FROM cadastro_atletas a
-    LEFT JOIN modalidades_esporte t ON t.id = a.modalidade_esporte_id
-    ORDER BY a.nome ASC';
-$queryAtletas = $mysqli->query($sqlAtletas);
-
-if (!$queryAtletas) {
-    die('Erro na consulta ao banco de dados: ' . e($mysqli->error));
+$modalidadesEsporte = buscar_modalidades_esporte($db);
+$nomesModalidades = [];
+foreach ($modalidadesEsporte as $modalidade) {
+    $nomesModalidades[(int) $modalidade['id']] = (string) $modalidade['nome'];
 }
 
-$atletas = $queryAtletas->fetch_all(MYSQLI_ASSOC);
+$atletas = $db->select('cadastro_atletas', '*', [], 'nome ASC');
+foreach ($atletas as &$atleta) {
+    $idModalidade = (int) ($atleta['modalidade_esporte_id'] ?? 0);
+    $atleta['modalidade_esporte_nome'] = $nomesModalidades[$idModalidade] ?? null;
+}
+unset($atleta);
+
 $totalAtletas = count($atletas);
-$modalidadesEsporte = buscar_modalidades_esporte($mysqli);
 
 $mensagens = [
     'cadastrado' => ['success', 'Atleta cadastrado com sucesso.'],
@@ -105,7 +106,7 @@ render_page_header(
                             <?php foreach ($atletas as $atleta): ?>
                                 <?php
                                 $fotoRelativa = (string) ($atleta['foto'] ?? '');
-                                $temFoto = $fotoRelativa !== '' && file_exists(__DIR__ . '/' . $fotoRelativa);
+                                $temFoto = filter_var($fotoRelativa, FILTER_VALIDATE_URL) !== false;
                                 $textoBusca = implode(' ', [
                                     $atleta['nome'] ?? '',
                                     $atleta['email'] ?? '',
