@@ -1,9 +1,9 @@
 <?php
 
-$host = "localhost";
-$db = "projeto_jandira";
-$user = "root";
-$pass = "1234";
+$host = getenv('DB_HOST') ?: 'localhost';
+$db = getenv('DB_NAME') ?: 'projeto_jandira';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : '1234';
 
 $mysqli = new mysqli($host, $user, $pass, $db);
 if ($mysqli->connect_errno) {
@@ -60,4 +60,28 @@ function formatar_cpf($cpf) {
 	$part3 = substr($cpf, 6, 3);
 	$part4 = substr($cpf, 9);
 	return "$part1.$part2.$part3-$part4";
+}
+
+function buscar_modalidades_esporte(mysqli $mysqli): array {
+	$resultado = $mysqli->query('SELECT id, nome FROM modalidades_esporte ORDER BY nome ASC');
+	return $resultado ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+function modalidade_esporte_existe(mysqli $mysqli, int $id): bool {
+	if ($id <= 0) {
+		return false;
+	}
+
+	$stmt = $mysqli->prepare('SELECT 1 FROM modalidades_esporte WHERE id = ? LIMIT 1');
+	if (!$stmt) {
+		return false;
+	}
+
+	$stmt->bind_param('i', $id);
+	$stmt->execute();
+	$stmt->store_result();
+	$existe = $stmt->num_rows > 0;
+	$stmt->close();
+
+	return $existe;
 }

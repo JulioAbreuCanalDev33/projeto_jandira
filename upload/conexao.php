@@ -1,18 +1,13 @@
 <?php
-$host = "localhost";
-$db = "projeto_jandira";
-$user = "root";
-$pass = "1234";
 
-// Criação da conexão usando MySQLi com tratamento de erro
+$host = getenv('DB_HOST') ?: 'localhost';
+$db = getenv('DB_NAME') ?: 'projeto_jandira';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : '1234';
+
 $mysqli = new mysqli($host, $user, $pass, $db);
-
-// Verifica se ocorreu um erro na conexão
-if ($mysqli->connect_error) {
-    die("Falha na conexão com o banco de dados: " . $mysqli->connect_error);
+if ($mysqli->connect_errno) {
+    die('Falha na conexão com o banco de dados.');
 }
 
-
-// Define o charset para UTF-8
-$mysqli->set_charset("utf8mb4");
-?>
+$mysqli->set_charset('utf8mb4');

@@ -7,6 +7,22 @@ function flash(string $type, string $message): void
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
 }
 
+function caminho_fisico_arquivo(string $path): ?string
+{
+    if ($path === '' || !str_starts_with($path, 'arquivos/')) {
+        return null;
+    }
+
+    $diretorio = realpath(__DIR__ . '/arquivos');
+    $arquivo = realpath(__DIR__ . '/' . $path);
+
+    if (!$diretorio || !$arquivo || !is_file($arquivo) || !str_starts_with($arquivo, $diretorio . DIRECTORY_SEPARATOR)) {
+        return null;
+    }
+
+    return $arquivo;
+}
+
 require_csrf();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deletar'])) {
@@ -27,12 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deletar'])) {
         if ($delete->execute()) {
             $delete->close();
 
-            $path = (string) ($arquivo['path'] ?? '');
-            if ($path !== '' && str_starts_with($path, 'arquivos/')) {
-                $arquivoFisico = __DIR__ . '/' . $path;
-                if (file_exists($arquivoFisico)) {
-                    @unlink($arquivoFisico);
-                }
+            $arquivoFisico = caminho_fisico_arquivo((string) ($arquivo['path'] ?? ''));
+            if ($arquivoFisico !== null) {
+                @unlink($arquivoFisico);
             }
 
             flash('success', 'Arquivo excluído com sucesso.');
@@ -61,9 +74,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivos'])) {
         ];
     }
 
-    $extensoesPermitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $tiposPermitidos = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+    ];
+    $diretorio = __DIR__ . '/arquivos';
 
-    foreach ($arquivos['name'] as $index => $nomeOriginal) {
+    if (!is_dir($diretorio) && !mkdir($diretorio, 0755, true)) {
+        flash('danger', 'Não foi possível preparar a pasta de arquivos.');
+        header('Location: index.php');
+        exit;
+    }
+
+    foreach ($arquivos['name'] as $index => $nomeEnvio) {
         if (($arquivos['error'][$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
             continue;
         }
@@ -78,16 +104,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['arquivos'])) {
             continue;
         }
 
-        $extensao = strtolower(pathinfo((string) $nomeOriginal, PATHINFO_EXTENSION));
+        $nomeOriginal = basename(str_replace(["\r", "\n"], '', (string) $nomeEnvio));
+        $extensao = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
 
-        if (!in_array($extensao, $extensoesPermitidas, true)) {
+        if (!isset($tiposPermitidos[$extensao])) {
             $falhas++;
             continue;
         }
 
-        $nomeArquivo = uniqid('', true) . '.' . $extensao;
+        $infoImagem = @getimagesize($arquivos['tmp_name'][$index]);
+        if ($infoImagem === false || ($infoImagem['mime'] ?? '') !== $tiposPermitidos[$extensao]) {
+            $falhas++;
+            continue;
+        }
+
+        if ($nomeOriginal === '') {
+            $nomeOriginal = 'arquivo.' . $extensao;
+        }
+        $nomeOriginal = mb_substr($nomeOriginal, 0, 255);
+
+        $nomeArquivo = bin2hex(random_bytes(12)) . '.' . $extensao;
         $path = 'arquivos/' . $nomeArquivo;
-        $destino = __DIR__ . '/' . $path;
+        $destino = $diretorio . DIRECTORY_SEPARATOR . $nomeArquivo;
 
         if (!move_uploaded_file($arquivos['tmp_name'][$index], $destino)) {
             $falhas++;
@@ -194,13 +232,32 @@ render_page_header(
                                 <p>Use o formulário ao lado para adicionar as primeiras imagens.</p>
                             </div>
                         <?php else: ?>
-                            <div class="gallery-grid">
+                            <div class="table-toolbar mb-3">
+                                <div class="search-box">
+                                    <i class="bi bi-search" aria-hidden="true"></i>
+                                    <label class="visually-hidden" for="buscaArquivos">Buscar arquivo</label>
+                                    <input
+                                        type="search"
+                                        class="form-control"
+                                        id="buscaArquivos"
+                                        placeholder="Buscar por nome..."
+                                        data-file-search
+                                        data-file-target="#galeriaArquivos"
+                                        autocomplete="off"
+                                    >
+                                </div>
+                                <span class="result-count" data-file-count>
+                                    <?= $totalArquivos ?> <?= $totalArquivos === 1 ? 'arquivo encontrado' : 'arquivos encontrados' ?>
+                                </span>
+                            </div>
+
+                            <div class="gallery-grid" id="galeriaArquivos">
                                 <?php foreach ($arquivos as $arquivo): ?>
                                     <?php
                                     $path = (string) ($arquivo['path'] ?? '');
-                                    $existe = $path !== '' && file_exists(__DIR__ . '/' . $path);
+                                    $existe = caminho_fisico_arquivo($path) !== null;
                                     ?>
-                                    <article class="file-card">
+                                    <article class="file-card" data-search="<?= e(mb_strtolower((string) $arquivo['nome'])) ?>">
                                         <div class="file-thumb">
                                             <?php if ($existe): ?>
                                                 <img src="<?= e($path) ?>" alt="<?= e($arquivo['nome']) ?>" loading="lazy">
@@ -237,6 +294,11 @@ render_page_header(
                                         </div>
                                     </article>
                                 <?php endforeach; ?>
+                            </div>
+                            <div class="empty-state d-none" data-file-empty>
+                                <span class="empty-state-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+                                <h3>Nenhum arquivo encontrado</h3>
+                                <p>Tente outro termo para a busca.</p>
                             </div>
                         <?php endif; ?>
                     </div>

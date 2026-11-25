@@ -319,8 +319,9 @@ sequenceDiagram
 
     U->>A: POST /cadastro_atletas/cadastrar_atletas.php
     A->>A: Verifica CSRF
-    A->>V: Nome · e-mail · data · CPF · CEP · telefone · senha
+    A->>V: Nome · e-mail · data · CPF · CEP · telefone · senha · modalidade
     V-->>A: Dados normalizados
+    A->>DB: SELECT 1 FROM modalidades_esporte WHERE id = ?
     A->>FS: move_uploaded_file(foto)
     A->>DB: INSERT com prepared statement
     DB-->>A: Registro criado
@@ -340,12 +341,18 @@ projeto_jandira/
 ├── cadastro_atletas/
 │   ├── conexao.php               # conexão e helpers de formatação
 │   ├── atletas.php               # listagem e busca
-│   ├── cadastrar_atletas.php     # cadastro com upload
-│   ├── editar_atletas.php        # edição e troca de foto
-│   ├── deletar_atletas.php       # confirmação de exclusão
-│   ├── adicionar_eventos.php     # cadastro e agenda de eventos
-│   ├── cadastro_atletas.sql      # estrutura da tabela de atletas
-│   └── eventos.sql               # estrutura da tabela de eventos
+│   ├── cadastrar_atletas.php            # cadastro com upload
+│   ├── editar_atletas.php               # edição e troca de foto
+│   ├── deletar_atletas.php              # confirmação de exclusão
+│   ├── adicionar_eventos.php            # cadastro e agenda de eventos
+│   ├── modalidades_esporte.php          # listagem e gestão das modalidades
+│   ├── cadastrar_modalidade_esporte.php # cadastro de modalidade
+│   ├── editar_modalidade_esporte.php    # edição de modalidade
+│   ├── deletar_modalidade_esporte.php   # exclusão segura de modalidade
+│   ├── modalidades_esporte.sql          # estrutura e dados iniciais das modalidades
+│   ├── migracao_modalidades_esporte.sql # migração para bancos já existentes
+│   ├── cadastro_atletas.sql             # estrutura da tabela de atletas
+│   └── eventos.sql                      # estrutura da tabela de eventos
 ├── criptografia/
 │   ├── conexao.php               # conexão da área restrita
 │   ├── login.php                 # autenticação
@@ -364,7 +371,7 @@ projeto_jandira/
 │   ├── index.php                 # upload e galeria
 │   ├── conexao.php               # conexão do módulo
 │   └── upload.sql                # estrutura da tabela de arquivos
-├── .env.example                  # modelo de configuração SMTP
+├── .env.example                  # modelo de configuração (banco e SMTP)
 ├── .gitignore                    # proteção de credenciais e temporários
 ├── index.php                     # página inicial
 ├── AMBIENTE-LOCAL.md             # documentação do ambiente de desenvolvimento
@@ -493,10 +500,13 @@ erDiagram
 
 | Tabela | Conteúdo | Observações |
 | --- | --- | --- |
-| `cadastro_atletas` | Dados pessoais, endereço, contato, senha e foto | A senha é armazenada com hash |
+| `cadastro_atletas` | Dados pessoais, endereço, contato, senha, foto e modalidade | A senha é armazenada com hash; `modalidade_esporte_id` referencia `modalidades_esporte` |
+| `modalidades_esporte` | Nome, descrição e data de cadastro das modalidades | Nome único; modalidades com atletas vinculados não podem ser excluídas |
 | `eventos` | Título, descrição, início e término | O período é validado na aplicação |
 | `senhas` | E-mail e hash de senha da equipe gestora | Acesso ao painel administrativo |
 | `arquivos` | Nome original, caminho e data de upload | O arquivo físico fica em `upload/arquivos/` |
+
+Para bancos já existentes, aplique `cadastro_atletas/migracao_modalidades_esporte.sql`: ela renomeia a estrutura antiga (`tipos_esporte` / `tipo_esporte_id`) preservando os dados e pode ser executada mais de uma vez. Em uma instalação limpa, importe `modalidades_esporte.sql` antes de `cadastro_atletas.sql` para satisfazer a chave estrangeira.
 
 ---
 
@@ -513,8 +523,8 @@ erDiagram
 | **Senhas** | `password_hash` com `PASSWORD_DEFAULT` e `password_verify` |
 | **Fixação de sessão** | `session_regenerate_id(true)` após login bem-sucedido |
 | **Logout** | Somente via POST com token CSRF e destruição completa da sessão |
-| **Upload** | Validação de extensão, tamanho, nome aleatório e `move_uploaded_file` |
-| **Segredos** | Credenciais SMTP em `.env`, com `.env.example` versionado e `.env` ignorado |
+| **Upload** | Validação de extensão, MIME real, tamanho, nome aleatório e `move_uploaded_file` |
+| **Segredos** | Credenciais de banco e SMTP em `.env`, com `.env.example` versionado e `.env` ignorado |
 | **Erros** | Mensagens genéricas para o usuário, sem exposição de stack trace ou credenciais |
 
 ### Evoluções recomendadas para produção

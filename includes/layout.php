@@ -182,6 +182,7 @@ function render_layout_start(string $title, string $active = '', string $descrip
     $navItems = [
         'inicio' => ['label' => 'Início', 'href' => app_url('')],
         'atletas' => ['label' => 'Atletas', 'href' => app_url('cadastro_atletas/atletas.php')],
+        'esportes' => ['label' => 'Modalidades de esporte', 'href' => app_url('cadastro_atletas/modalidades_esporte.php')],
         'eventos' => ['label' => 'Eventos', 'href' => app_url('cadastro_atletas/adicionar_eventos.php')],
         'arquivos' => ['label' => 'Arquivos', 'href' => app_url('upload/index.php')],
     ];
@@ -332,6 +333,7 @@ function render_layout_end(): void
                 <ul class="footer-links">
                     <li><a href="<?= e(app_url('')) ?>">Início</a></li>
                     <li><a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>">Atletas</a></li>
+                    <li><a href="<?= e(app_url('cadastro_atletas/modalidades_esporte.php')) ?>">Modalidades de esporte</a></li>
                     <li><a href="<?= e(app_url('cadastro_atletas/adicionar_eventos.php')) ?>">Eventos</a></li>
                     <li><a href="<?= e(app_url('upload/index.php')) ?>">Arquivos</a></li>
                 </ul>

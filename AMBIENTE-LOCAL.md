@@ -66,6 +66,15 @@ MAIL_TO_NAME="Equipe Projeto Jandira"
 MAIL_DEBUG=0
 ```
 
+As conexões com o banco de atletas, arquivos e área restrita também leem `DB_HOST`, `DB_NAME`, `DB_USER` e `DB_PASS` do `.env` (com valores padrão para o ambiente local):
+
+```dotenv
+DB_HOST=127.0.0.1
+DB_NAME=projeto_jandira
+DB_USER=root
+DB_PASS=1234
+```
+
 O arquivo `.env` está no `.gitignore` e nunca deve ser versionado.
 
 ## Módulos
@@ -73,24 +82,30 @@ O arquivo `.env` está no `.gitignore` e nunca deve ser versionado.
 | Módulo | Endereço | Situação |
 | --- | --- | --- |
 | Página inicial | `/` | Institucional, com navegação para os módulos |
-| Atletas | `/cadastro_atletas/atletas.php` | Listagem, busca e ações de edição/exclusão |
-| Novo atleta | `/cadastro_atletas/cadastrar_atletas.php` | Cadastro com validação e upload de foto |
+| Atletas | `/cadastro_atletas/atletas.php` | Listagem, busca, filtro por modalidade e ações de edição/exclusão |
+| Modalidades de esporte | `/cadastro_atletas/modalidades_esporte.php` | Listagem e gestão das modalidades esportivas |
+| Nova modalidade | `/cadastro_atletas/cadastrar_modalidade_esporte.php` | Cadastro de modalidade de esporte |
+| Editar/excluir modalidade | `/cadastro_atletas/editar_modalidade_esporte.php?id=ID` e `deletar_modalidade_esporte.php?id=ID` | Atualização e exclusão segura (bloqueia modalidades em uso) |
+| Novo atleta | `/cadastro_atletas/cadastrar_atletas.php` | Cadastro com validação, modalidade e upload de foto |
 | Editar atleta | `/cadastro_atletas/editar_atletas.php?id=ID` | Atualização de dados e troca de foto |
 | Excluir atleta | `/cadastro_atletas/deletar_atletas.php?id=ID` | Confirmação antes da exclusão |
 | Eventos | `/cadastro_atletas/adicionar_eventos.php` | Cadastro e listagem da agenda |
 | Usuários / login | `/criptografia/login.php` | Autenticação da equipe gestora |
 | Painel administrativo | `/criptografia/index.php` | Cadastro de novos acessos |
-| Uploads | `/upload/index.php` | Galeria, envio e exclusão de imagens |
+| Uploads | `/upload/index.php` | Galeria com busca, envio validado e exclusão segura de imagens |
 | E-mail | `/email/enviar.php` | Teste de envio SMTP mediante formulário POST |
 
 ## Tabelas do banco
 
 - `cadastro_atletas` — 2 registros
+- `modalidades_esporte` — 5 registros
 - `eventos` — 1 registro
 - `senhas` — 5 registros
 - `arquivos` — 3 registros
 
 A antiga tabela `veiculos`, usada apenas como teste de busca, foi removida.
+
+Para bancos já existentes, execute `cadastro_atletas/migracao_modalidades_esporte.sql`: ela renomeia `tipos_esporte` para `modalidades_esporte` e `tipo_esporte_id` para `modalidade_esporte_id`, preservando os dados e podendo ser rodada mais de uma vez. Em instalações do zero, importe `modalidades_esporte.sql` antes de `cadastro_atletas.sql`, pois a tabela de atletas referencia as modalidades.
 
 ## Identidade visual e temas
 

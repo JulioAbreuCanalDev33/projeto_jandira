@@ -2,7 +2,10 @@
 require_once __DIR__ . '/../includes/layout.php';
 require_once __DIR__ . '/conexao.php';
 
-$sqlAtletas = 'SELECT * FROM cadastro_atletas ORDER BY nome ASC';
+$sqlAtletas = 'SELECT a.*, t.nome AS modalidade_esporte_nome
+    FROM cadastro_atletas a
+    LEFT JOIN modalidades_esporte t ON t.id = a.modalidade_esporte_id
+    ORDER BY a.nome ASC';
 $queryAtletas = $mysqli->query($sqlAtletas);
 
 if (!$queryAtletas) {
@@ -11,6 +14,7 @@ if (!$queryAtletas) {
 
 $atletas = $queryAtletas->fetch_all(MYSQLI_ASSOC);
 $totalAtletas = count($atletas);
+$modalidadesEsporte = buscar_modalidades_esporte($mysqli);
 
 $mensagens = [
     'cadastrado' => ['success', 'Atleta cadastrado com sucesso.'],
@@ -50,11 +54,20 @@ render_page_header(
                         type="search"
                         class="form-control"
                         id="buscaAtletas"
-                        placeholder="Buscar por nome, CPF, e-mail ou cidade..."
+                        placeholder="Buscar por nome, CPF, e-mail, cidade ou modalidade..."
                         data-table-search
                         data-table-target="#tabelaAtletas"
                         autocomplete="off"
                     >
+                </div>
+                <div class="filter-box">
+                    <label class="visually-hidden" for="filtroModalidade">Filtrar por modalidade</label>
+                    <select class="form-select" id="filtroModalidade" data-table-filter data-modalidade-esporte-filter data-table-target="#tabelaAtletas">
+                        <option value="">Todas as modalidades</option>
+                        <?php foreach ($modalidadesEsporte as $modalidade): ?>
+                            <option value="<?= (int) $modalidade['id'] ?>"><?= e($modalidade['nome']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <span class="result-count" data-result-count>
                     <?= $totalAtletas ?> <?= $totalAtletas === 1 ? 'registro encontrado' : 'registros encontrados' ?>
@@ -69,6 +82,7 @@ render_page_header(
                             <th scope="col">CPF</th>
                             <th scope="col">Telefone</th>
                             <th scope="col">Cidade</th>
+                            <th scope="col">Modalidade</th>
                             <th scope="col">Nascimento</th>
                             <th scope="col" class="text-end">Ações</th>
                         </tr>
@@ -76,7 +90,7 @@ render_page_header(
                     <tbody>
                         <?php if ($totalAtletas === 0): ?>
                             <tr>
-                                <td colspan="6">
+                                <td colspan="7">
                                     <div class="empty-state">
                                         <span class="empty-state-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
                                         <h3>Nenhum atleta cadastrado</h3>
@@ -98,9 +112,10 @@ render_page_header(
                                     $atleta['cpf'] ?? '',
                                     $atleta['cidade'] ?? '',
                                     $atleta['telefone'] ?? '',
+                                        $atleta['modalidade_esporte_nome'] ?? '',
                                 ]);
                                 ?>
-                                <tr data-search="<?= e($textoBusca) ?>">
+                                <tr data-search="<?= e($textoBusca) ?>" data-modalidade-esporte="<?= (int) ($atleta['modalidade_esporte_id'] ?? 0) ?>">
                                     <td>
                                         <div class="person-cell">
                                             <?php if ($temFoto): ?>
@@ -120,6 +135,13 @@ render_page_header(
                                         <?= e($atleta['cidade'] ?: '—') ?>
                                         <?php if (!empty($atleta['municipio'])): ?>
                                             <span class="person-meta"><?= e($atleta['municipio']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($atleta['modalidade_esporte_nome'])): ?>
+                                            <span class="badge text-bg-primary"><?= e($atleta['modalidade_esporte_nome']) ?></span>
+                                        <?php else: ?>
+                                            <span class="person-meta">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="mono"><?= e(formatar_data_br($atleta['data_nascimento'])) ?></td>
@@ -146,11 +168,11 @@ render_page_header(
                                 </tr>
                             <?php endforeach; ?>
                             <tr class="d-none" data-empty-search>
-                                <td colspan="6">
+                                <td colspan="7">
                                     <div class="empty-state">
                                         <span class="empty-state-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
                                         <h3>Nenhum atleta encontrado</h3>
-                                        <p>Tente buscar por outro nome, CPF, e-mail ou cidade.</p>
+                                        <p>Tente buscar por outro nome, CPF, e-mail, cidade ou modalidade.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -161,7 +183,7 @@ render_page_header(
 
             <div class="surface-card-footer">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
-                Os dados completos de endereço e documentação podem ser consultados na edição de cada atleta.
+                Use a busca e o filtro por modalidade para localizar atletas. Os dados completos de endereço e documentação ficam na edição de cada registro.
             </div>
         </div>
     </div>

@@ -52,7 +52,7 @@
 
     syncThemeControls();
 
-    // Busca instantânea nas tabelas
+    // Busca instantânea e filtro por modalidade nas tabelas
     document.querySelectorAll("[data-table-search]").forEach(function (input) {
         const targetSelector = input.getAttribute("data-table-target");
         const table = targetSelector ? document.querySelector(targetSelector) : null;
@@ -64,6 +64,9 @@
         const rows = Array.from(table.querySelectorAll("tbody tr[data-search]"));
         const emptyRow = table.querySelector("[data-empty-search]");
         const counter = document.querySelector("[data-result-count]");
+        const filters = Array.from(document.querySelectorAll("[data-table-filter]")).filter(function (select) {
+            return select.getAttribute("data-table-target") === targetSelector;
+        });
 
         const applyFilter = function () {
             const term = input.value.trim().toLowerCase();
@@ -71,7 +74,23 @@
 
             rows.forEach(function (row) {
                 const haystack = (row.getAttribute("data-search") || row.textContent).toLowerCase();
-                const match = term === "" || haystack.indexOf(term) !== -1;
+                const modalidadeEsporte = row.getAttribute("data-modalidade-esporte") || "";
+                const matchesTerm = term === "" || haystack.indexOf(term) !== -1;
+                const matchesFilters = filters.every(function (select) {
+                    const value = select.value;
+
+                    if (value === "") {
+                        return true;
+                    }
+
+                    if (select.hasAttribute("data-modalidade-esporte-filter")) {
+                        return modalidadeEsporte === value;
+                    }
+
+                    return true;
+                });
+                const match = matchesTerm && matchesFilters;
+
                 row.classList.toggle("d-none", !match);
 
                 if (match) {
@@ -87,6 +106,52 @@
                 counter.textContent = visible === 1
                     ? "1 registro encontrado"
                     : visible + " registros encontrados";
+            }
+        };
+
+        input.addEventListener("input", applyFilter);
+        filters.forEach(function (select) {
+            select.addEventListener("change", applyFilter);
+        });
+        applyFilter();
+    });
+
+    // Busca instantânea na galeria de arquivos
+    document.querySelectorAll("[data-file-search]").forEach(function (input) {
+        const targetSelector = input.getAttribute("data-file-target");
+        const gallery = targetSelector ? document.querySelector(targetSelector) : null;
+
+        if (!gallery) {
+            return;
+        }
+
+        const cards = Array.from(gallery.querySelectorAll(".file-card[data-search]"));
+        const emptyState = document.querySelector("[data-file-empty]");
+        const counter = document.querySelector("[data-file-count]");
+        const total = cards.length;
+
+        const applyFilter = function () {
+            const term = input.value.trim().toLowerCase();
+            let visible = 0;
+
+            cards.forEach(function (card) {
+                const haystack = (card.getAttribute("data-search") || card.textContent).toLowerCase();
+                const match = term === "" || haystack.indexOf(term) !== -1;
+                card.classList.toggle("d-none", !match);
+
+                if (match) {
+                    visible += 1;
+                }
+            });
+
+            if (emptyState) {
+                emptyState.classList.toggle("d-none", visible > 0 || total === 0);
+            }
+
+            if (counter) {
+                counter.textContent = visible === 1
+                    ? "1 arquivo encontrado"
+                    : visible + " arquivos encontrados";
             }
         };
 

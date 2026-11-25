@@ -23,6 +23,22 @@
       "use": "vercel-php@0.7.3"
     },
     {
+      "src": "cadastro_atletas/modalidades_esporte.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/cadastrar_modalidade_esporte.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/editar_modalidade_esporte.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "cadastro_atletas/deletar_modalidade_esporte.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
       "src": "cadastro_atletas/adicionar_eventos.php",
       "use": "vercel-php@0.7.3"
     },
@@ -97,6 +113,22 @@
       "dest": "/cadastro_atletas/deletar_atletas.php"
     },
     {
+      "src": "^/cadastro_atletas/modalidades_esporte\\.php$",
+      "dest": "/cadastro_atletas/modalidades_esporte.php"
+    },
+    {
+      "src": "^/cadastro_atletas/cadastrar_modalidade_esporte\\.php$",
+      "dest": "/cadastro_atletas/cadastrar_modalidade_esporte.php"
+    },
+    {
+      "src": "^/cadastro_atletas/editar_modalidade_esporte\\.php$",
+      "dest": "/cadastro_atletas/editar_modalidade_esporte.php"
+    },
+    {
+      "src": "^/cadastro_atletas/deletar_modalidade_esporte\\.php$",
+      "dest": "/cadastro_atletas/deletar_modalidade_esporte.php"
+    },
+    {
       "src": "^/cadastro_atletas/adicionar_eventos\\.php$",
       "dest": "/cadastro_atletas/adicionar_eventos.php"
     },
@@ -153,6 +185,34 @@
       "status": 308,
       "headers": {
         "Location": "/cadastro_atletas/atletas.php"
+      }
+    },
+    {
+      "src": "^/esportes/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/modalidades_esporte.php"
+      }
+    },
+    {
+      "src": "^/modalidades/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/modalidades_esporte.php"
+      }
+    },
+    {
+      "src": "^/modalidades-de-esporte/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/modalidades_esporte.php"
+      }
+    },
+    {
+      "src": "^/tipos-de-esporte/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/cadastro_atletas/modalidades_esporte.php"
       }
     },
     {

@@ -872,6 +872,16 @@ img {
     background: #fbfcfe;
 }
 
+.filter-box {
+    width: 100%;
+    max-width: 240px;
+}
+
+.filter-box .form-select {
+    height: 44px;
+    background: #fbfcfe;
+}
+
 .result-count {
     color: var(--muted);
     font-size: .84rem;

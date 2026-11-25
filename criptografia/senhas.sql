@@ -39,9 +39,7 @@ CREATE TABLE `senhas` (
 
 INSERT INTO `senhas` (`id`, `senha`, `email`) VALUES
 (1, '$2y$10$Zg9lSmjNzb6fsO4SFhwPn.cK4X.Xho8vSbSc0qaID0ycqqkTUPx3m', 'juliocasp38@gmail.com'),
-(2, '$2y$10$ut6l9ni/NBM/bM1rtfNIQeEytLRgzz/I2rh3Ubf8MoMUUUgo5O8T6', 'juliocasp38@gmail.com'),
 (3, '$2y$10$BwvNxAnph4tD0zPR67ei/.qBiOHSOmWqMeLp0QFAIiLP6D3RSNKxa', 'maria@gmail.com'),
-(4, '$2y$10$mPCHA0PTa09leOElXzSKde./eW8BMxDAYy59OiWdh76q6isN51oNO', 'juliocasp38@gmail.com'),
 (5, '$2y$10$3T3C91gxQR0FUuFYBSfJ6eWBm/w7TrUOpDj4qRebon4eThX7woAc2', 'samuel@gmail.com');
 
 --

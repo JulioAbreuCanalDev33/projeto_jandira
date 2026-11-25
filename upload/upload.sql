@@ -39,9 +39,13 @@ CREATE TABLE `arquivos` (
 --
 
 INSERT INTO `arquivos` (`id`, `nome`, `path`, `data_upload`) VALUES
-(2, 'cadastrar_atleta.png', 'arquivos/6779b9a048e04.png', '2025-01-04 19:43:44'),
-(6, 'listas_de_atletas.png', 'arquivos/6779bd64f098c.png', '2025-01-04 19:59:48'),
-(10, 'php_logo.jpeg', 'arquivos/677c861d81c40.jpeg', '2025-01-06 22:40:45');
+(17, 'galeria_de_arquivos.png', 'arquivos/67878d740cdfd.png', '2025-01-15 07:38:10'),
+(18, 'listas_de_atletas.png', 'arquivos/67879045d3fce.png', '2025-01-15 07:39:01'),
+(19, 'cadastrar_atleta.png', 'arquivos/6787906040a4c.png', '2025-01-15 07:39:28'),
+(20, 'Captura de tela de 2024-12-23 13-05-06.png', 'arquivos/6787906041390.png', '2025-01-15 07:39:28'),
+(21, 'Captura de tela de 2025-01-06 19-44-09.png', 'arquivos/678790604189c.png', '2025-01-15 07:39:28'),
+(22, 'Captura de tela de 2025-01-15 07-23-54.png', 'arquivos/6787906041d29.png', '2025-01-15 07:39:28'),
+(23, 'deletar_atleta.png', 'arquivos/6787906042104.png', '2025-01-15 07:39:28');
 
 --
 -- Índices para tabelas despejadas
@@ -61,7 +65,7 @@ ALTER TABLE `arquivos`
 -- AUTO_INCREMENT de tabela `arquivos`
 --
 ALTER TABLE `arquivos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

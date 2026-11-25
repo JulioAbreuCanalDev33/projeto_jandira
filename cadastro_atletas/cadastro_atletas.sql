@@ -42,6 +42,7 @@ CREATE TABLE `cadastro_atletas` (
   `email` varchar(50) DEFAULT NULL,
   `senha` varchar(255) NOT NULL,
   `telefone` varchar(15) NOT NULL,
+  `modalidade_esporte_id` int(11) DEFAULT NULL,
   `data_cadastro` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='registro de todos atletas de jandira';
 
@@ -49,9 +50,9 @@ CREATE TABLE `cadastro_atletas` (
 -- Despejando dados para a tabela `cadastro_atletas`
 --
 
-INSERT INTO `cadastro_atletas` (`id`, `foto`, `nome`, `rg`, `cpf`, `endereco`, `numero`, `cep`, `municipio`, `cidade`, `data_nascimento`, `email`, `senha`, `telefone`, `data_cadastro`) VALUES
-(18, 'arquivos/67922595c2c6f.jpeg', 'antonio velasque', '123564454', '32265478989', 'rua brasil', '2100', '06618000', 'itapevi', 'sao paulo', '1990-02-10', 'canaldev33@gmail.com', '$2y$10$nZaKJLeA9pcfSourxdspR.aNLlMLicfUTOJAD7OpJlhMVpjfFQYpC', '11946476117', '2025-01-23 08:18:45'),
-(19, 'arquivos/679225dd453a1.png', 'marcos antonio velasques', '33234790', '32265498712', 'av nazare', '4500', '06618000', 'Jandira', 'Sao paulo', '1990-02-10', 'canaldev33@gmail.com', '$2y$10$alaUbc32WrPhfRtMVmsgneHxGMVQ5R1FC5y6nQ5qLrGGQ20036dg.', '11946476117', '2025-01-23 08:19:57');
+INSERT INTO `cadastro_atletas` (`id`, `foto`, `nome`, `rg`, `cpf`, `endereco`, `numero`, `cep`, `municipio`, `cidade`, `data_nascimento`, `email`, `senha`, `telefone`, `modalidade_esporte_id`, `data_cadastro`) VALUES
+(18, 'arquivos/67922595c2c6f.jpeg', 'antonio velasque', '123564454', '32265478989', 'rua brasil', '2100', '06618000', 'itapevi', 'sao paulo', '1990-02-10', 'canaldev33@gmail.com', '$2y$10$nZaKJLeA9pcfSourxdspR.aNLlMLicfUTOJAD7OpJlhMVpjfFQYpC', '11946476117', 1, '2025-01-23 08:18:45'),
+(19, 'arquivos/679225dd453a1.png', 'marcos antonio velasques', '33234790', '32265498712', 'av nazare', '4500', '06618000', 'Jandira', 'Sao paulo', '1990-02-10', 'canaldev33@gmail.com', '$2y$10$alaUbc32WrPhfRtMVmsgneHxGMVQ5R1FC5y6nQ5qLrGGQ20036dg.', '11946476117', 2, '2025-01-23 08:19:57');
 
 --
 -- Índices para tabelas despejadas
@@ -61,7 +62,11 @@ INSERT INTO `cadastro_atletas` (`id`, `foto`, `nome`, `rg`, `cpf`, `endereco`, `
 -- Índices de tabela `cadastro_atletas`
 --
 ALTER TABLE `cadastro_atletas`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_atletas_modalidade_esporte` (`modalidade_esporte_id`);
+
+ALTER TABLE `cadastro_atletas`
+  ADD CONSTRAINT `fk_atletas_modalidade_esporte` FOREIGN KEY (`modalidade_esporte_id`) REFERENCES `modalidades_esporte` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- AUTO_INCREMENT para tabelas despejadas

@@ -59,6 +59,7 @@ $valores = [
     'data_nascimento' => (string) ($atleta['data_nascimento'] ?? ''),
     'email' => (string) ($atleta['email'] ?? ''),
     'telefone' => (string) ($atleta['telefone'] ?? ''),
+    'modalidade_esporte_id' => (string) ($atleta['modalidade_esporte_id'] ?? ''),
 ];
 
 $cpfAtual = preg_replace('/\D/', '', (string) $atleta['cpf']);
@@ -80,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cpf = preg_replace('/\D/', '', $valores['cpf']);
     $cep = preg_replace('/\D/', '', $valores['cep']);
     $telefone = preg_replace('/\D/', '', $valores['telefone']);
+    $modalidadeEsporteId = (int) ($_POST['modalidade_esporte_id'] ?? 0);
     $senha = (string) ($_POST['senha'] ?? '');
 
     $dataNormalizada = null;
@@ -101,6 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = 'Informe um e-mail válido.';
     } elseif ($dataNormalizada === null) {
         $erro = 'Informe uma data de nascimento válida.';
+    } elseif (!modalidade_esporte_existe($mysqli, $modalidadeEsporteId)) {
+        $erro = 'Selecione uma modalidade esportiva válida.';
     } elseif ($telefone !== '' && !in_array(strlen($telefone), [10, 11], true)) {
         $erro = 'Informe um telefone com DDD, no formato (11) 94647-6117.';
     } elseif ($cpf !== '' && strlen($cpf) !== 11) {
@@ -147,12 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $update = $mysqli->prepare(
             'UPDATE cadastro_atletas SET
                 foto = ?, nome = ?, rg = ?, cpf = ?, endereco = ?, numero = ?, cep = ?,
-                municipio = ?, cidade = ?, data_nascimento = ?, email = ?, senha = ?, telefone = ?
+                municipio = ?, cidade = ?, data_nascimento = ?, email = ?, senha = ?, telefone = ?,
+                modalidade_esporte_id = ?
              WHERE id = ?'
         );
 
         $update->bind_param(
-            'sssssssssssssi',
+            'sssssssssssssii',
             $caminhoFoto,
             $valores['nome'],
             $valores['rg'],
@@ -166,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $valores['email'],
             $senhaHash,
             $telefone,
+            $modalidadeEsporteId,
             $id
         );
 
@@ -184,6 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $update->close();
     }
 }
+
+$modalidadesEsporte = buscar_modalidades_esporte($mysqli);
 
 render_layout_start('Editar atleta', 'atletas', 'Atualize os dados do atleta no sistema.');
 ?>
@@ -234,6 +242,26 @@ render_page_header(
                         <div class="col-12 col-md-4">
                             <label for="data_nascimento" class="form-label">Data de nascimento <span class="required">*</span></label>
                             <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="<?= e($valores['data_nascimento']) ?>" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title"><i class="bi bi-trophy" aria-hidden="true"></i> Modalidade esportiva</h3>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="modalidade_esporte_id" class="form-label">Modalidade de esporte <span class="required">*</span></label>
+                            <select class="form-select" id="modalidade_esporte_id" name="modalidade_esporte_id" required>
+                                <option value="">Selecione uma modalidade</option>
+                                <?php foreach ($modalidadesEsporte as $modalidade): ?>
+                                    <option value="<?= (int) $modalidade['id'] ?>"<?= (int) $valores['modalidade_esporte_id'] === (int) $modalidade['id'] ? ' selected' : '' ?>>
+                                        <?= e($modalidade['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text">
+                                <a href="<?= e(app_url('cadastro_atletas/modalidades_esporte.php')) ?>">Gerenciar modalidades de esporte</a>.
+                            </div>
                         </div>
                     </div>
                 </div>
