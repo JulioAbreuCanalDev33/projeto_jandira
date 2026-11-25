@@ -83,9 +83,9 @@ O arquivo `.env` está no `.gitignore` e nunca deve ser versionado.
 | --- | --- | --- |
 | Página inicial | `/` | Institucional, com navegação para os módulos |
 | Atletas | `/cadastro_atletas/atletas.php` | Listagem, busca, filtro por modalidade e ações de edição/exclusão |
-| Modalidades de esporte | `/cadastro_atletas/modalidades_esporte.php` | Listagem e gestão das modalidades esportivas |
-| Nova modalidade | `/cadastro_atletas/cadastrar_modalidade_esporte.php` | Cadastro de modalidade de esporte |
-| Editar/excluir modalidade | `/cadastro_atletas/editar_modalidade_esporte.php?id=ID` e `deletar_modalidade_esporte.php?id=ID` | Atualização e exclusão segura (bloqueia modalidades em uso) |
+| Modalidades de esporte | `/cadastro_atletas/modalidades_esporte.php` | Listagem, busca e gestão das modalidades esportivas |
+| Nova modalidade | `/cadastro_atletas/modalidades_esporte.php?acao=novo` | Cadastro de modalidade de esporte |
+| Editar/excluir modalidade | `/cadastro_atletas/modalidades_esporte.php?acao=editar&id=ID` e `?acao=excluir&id=ID` | Atualização e exclusão segura (bloqueia modalidades em uso) |
 | Novo atleta | `/cadastro_atletas/cadastrar_atletas.php` | Cadastro com validação, modalidade e upload de foto |
 | Editar atleta | `/cadastro_atletas/editar_atletas.php?id=ID` | Atualização de dados e troca de foto |
 | Excluir atleta | `/cadastro_atletas/deletar_atletas.php?id=ID` | Confirmação antes da exclusão |

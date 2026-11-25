@@ -27,18 +27,6 @@
       "use": "vercel-php@0.7.3"
     },
     {
-      "src": "cadastro_atletas/cadastrar_modalidade_esporte.php",
-      "use": "vercel-php@0.7.3"
-    },
-    {
-      "src": "cadastro_atletas/editar_modalidade_esporte.php",
-      "use": "vercel-php@0.7.3"
-    },
-    {
-      "src": "cadastro_atletas/deletar_modalidade_esporte.php",
-      "use": "vercel-php@0.7.3"
-    },
-    {
       "src": "cadastro_atletas/adicionar_eventos.php",
       "use": "vercel-php@0.7.3"
     },
@@ -115,18 +103,6 @@
     {
       "src": "^/cadastro_atletas/modalidades_esporte\\.php$",
       "dest": "/cadastro_atletas/modalidades_esporte.php"
-    },
-    {
-      "src": "^/cadastro_atletas/cadastrar_modalidade_esporte\\.php$",
-      "dest": "/cadastro_atletas/cadastrar_modalidade_esporte.php"
-    },
-    {
-      "src": "^/cadastro_atletas/editar_modalidade_esporte\\.php$",
-      "dest": "/cadastro_atletas/editar_modalidade_esporte.php"
-    },
-    {
-      "src": "^/cadastro_atletas/deletar_modalidade_esporte\\.php$",
-      "dest": "/cadastro_atletas/deletar_modalidade_esporte.php"
     },
     {
       "src": "^/cadastro_atletas/adicionar_eventos\\.php$",

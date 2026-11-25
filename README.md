@@ -345,10 +345,7 @@ projeto_jandira/
 │   ├── editar_atletas.php               # edição e troca de foto
 │   ├── deletar_atletas.php              # confirmação de exclusão
 │   ├── adicionar_eventos.php            # cadastro e agenda de eventos
-│   ├── modalidades_esporte.php          # listagem e gestão das modalidades
-│   ├── cadastrar_modalidade_esporte.php # cadastro de modalidade
-│   ├── editar_modalidade_esporte.php    # edição de modalidade
-│   ├── deletar_modalidade_esporte.php   # exclusão segura de modalidade
+│   ├── modalidades_esporte.php          # listagem, cadastro, edição e exclusão segura
 │   ├── modalidades_esporte.sql          # estrutura e dados iniciais das modalidades
 │   ├── migracao_modalidades_esporte.sql # migração para bancos já existentes
 │   ├── cadastro_atletas.sql             # estrutura da tabela de atletas

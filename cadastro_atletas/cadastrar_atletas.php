@@ -199,9 +199,9 @@ render_page_header(
                             </select>
                             <div class="form-text">
                                 <?php if (count($modalidadesEsporte) === 0): ?>
-                                    Nenhuma modalidade cadastrada. <a href="<?= e(app_url('cadastro_atletas/cadastrar_modalidade_esporte.php')) ?>">Cadastre uma modalidade</a> antes de continuar.
+                                    Nenhuma modalidade cadastrada. <a href="<?= e(app_url('cadastro_atletas/modalidades_esporte.php?acao=novo')) ?>">Cadastre uma modalidade</a> antes de continuar.
                                 <?php else: ?>
-                                    Não encontrou a modalidade? <a href="<?= e(app_url('cadastro_atletas/cadastrar_modalidade_esporte.php')) ?>">Cadastre uma nova</a>.
+                                    Não encontrou a modalidade? <a href="<?= e(app_url('cadastro_atletas/modalidades_esporte.php?acao=novo')) ?>">Cadastre uma nova</a>.
                                 <?php endif; ?>
                             </div>
                         </div>
