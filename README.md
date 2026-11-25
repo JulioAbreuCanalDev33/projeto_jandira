@@ -559,7 +559,7 @@ Fotos e documentos são enviados ao bucket público `arquivos` do Supabase Stora
 
 A aplicação é publicada na Vercel (plano Hobby) em:
 
-**https://jandira-esportes-git-main-julio-abreu-s-projects-bc318a1c.vercel.app**
+**https://jandira-esportes.vercel.app**
 
 O `vercel.json` declara 12 funções PHP — limite do plano — e mantém os atalhos amigáveis (`/atletas`, `/modalidades-de-esporte`, `/eventos`, `/arquivos`, `/login`, `/painel`). As variáveis `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` ficam configuradas como secrets no projeto da Vercel; localmente, no `.env`. Para publicar, basta fazer push na branch `main`.
 

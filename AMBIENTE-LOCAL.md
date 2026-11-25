@@ -5,7 +5,7 @@ Este documento descreve como executar o projeto localmente e como ele se conecta
 ## Acesso
 
 - **Site local:** http://localhost:8000
-- **Site publicado:** https://jandira-esportes-git-main-julio-abreu-s-projects-bc318a1c.vercel.app
+- **Site publicado:** https://jandira-esportes.vercel.app
 - **Banco e arquivos:** Supabase (projeto `fitaluno`, plano free)
 
 O MySQL local não é mais usado pela aplicação. Os scripts `iniciar-local.ps1` e `parar-local.ps1` ainda podem iniciar/encerrar o MySQL por hábito do ambiente antigo, mas o Jandira lê e grava direto no Supabase.
