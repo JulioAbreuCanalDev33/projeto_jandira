@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/includes/layout.php';
 
+$visitante = !is_logged_in();
+$linkAtletas = $visitante ? login_url(app_url('cadastro_atletas/atletas.php')) : app_url('cadastro_atletas/atletas.php');
+$linkCadastrar = $visitante ? login_url(app_url('cadastro_atletas/cadastrar_atletas.php')) : app_url('cadastro_atletas/cadastrar_atletas.php');
+$linkEventos = $visitante ? login_url(app_url('cadastro_atletas/adicionar_eventos.php')) : app_url('cadastro_atletas/adicionar_eventos.php');
+$linkArquivos = $visitante ? login_url(app_url('upload/index.php')) : app_url('upload/index.php');
+
 render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Jandira: atletas, eventos e documentos em um só lugar.');
 ?>
 
@@ -24,11 +30,11 @@ render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Ja
                 </p>
 
                 <div class="hero-actions">
-                    <a href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>" class="btn btn-brand">
+                    <a href="<?= e($linkAtletas) ?>" class="btn btn-brand">
                         Explorar atletas
                         <i class="bi bi-arrow-right" aria-hidden="true"></i>
                     </a>
-                    <a href="<?= e(app_url('cadastro_atletas/cadastrar_atletas.php')) ?>" class="btn btn-outline-brand">
+                    <a href="<?= e($linkCadastrar) ?>" class="btn btn-outline-brand">
                         <i class="bi bi-person-plus" aria-hidden="true"></i>
                         Cadastrar atleta
                     </a>
@@ -74,7 +80,7 @@ render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Ja
 
         <div class="row g-4">
             <div class="col-12 col-md-6 col-xl-3">
-                <a class="access-card" href="<?= e(app_url('cadastro_atletas/atletas.php')) ?>">
+                <a class="access-card" href="<?= e($linkAtletas) ?>">
                     <div class="access-card-top">
                         <span class="icon-tile"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                     </div>
@@ -85,7 +91,7 @@ render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Ja
             </div>
 
             <div class="col-12 col-md-6 col-xl-3">
-                <a class="access-card" href="<?= e(app_url('cadastro_atletas/adicionar_eventos.php')) ?>">
+                <a class="access-card" href="<?= e($linkEventos) ?>">
                     <div class="access-card-top">
                         <span class="icon-tile accent"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i></span>
                     </div>
@@ -96,7 +102,7 @@ render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Ja
             </div>
 
             <div class="col-12 col-md-6 col-xl-3">
-                <a class="access-card" href="<?= e(app_url('upload/index.php')) ?>">
+                <a class="access-card" href="<?= e($linkArquivos) ?>">
                     <div class="access-card-top">
                         <span class="icon-tile green"><i class="bi bi-folder2-open" aria-hidden="true"></i></span>
                     </div>
@@ -162,7 +168,7 @@ render_layout_start('Início', 'inicio', 'Plataforma de gestão do esporte de Ja
                     <h2>O próximo grande nome do esporte pode estar aqui.</h2>
                     <p>Cadastre um novo atleta e ajude a construir uma história de conquistas para Jandira.</p>
                 </div>
-                <a href="<?= e(app_url('cadastro_atletas/cadastrar_atletas.php')) ?>" class="btn btn-accent btn-lg">
+                <a href="<?= e($linkCadastrar) ?>" class="btn btn-accent btn-lg">
                     <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
                     Cadastrar atleta
                 </a>
